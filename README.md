@@ -1,59 +1,98 @@
 # Loadvia
 
-Loadvia; desteklenen web sayfalarındaki video ve ses içeriklerini, bağlantıyı uygulamaya yapıştırarak indirmeyi amaçlayan hızlı, kolay ve yüksek kaliteli bir Windows masaüstü uygulamasıdır.
+YouTube, Instagram, X/Twitter, TikTok, Facebook ve Threads gibi platformlardan medya indirmeyi kolaylaştıran Windows masaüstü uygulaması.
 
-## Özellikler
+Güncel kararlı sürüm: **v1.2.1**
 
-- YouTube video ve oynatma listesi indirme
-- Instagram gönderi ve hikâye desteği
-- X / Twitter video desteği
-- TikTok video desteği
-- Facebook video ve Reels desteği
-- Threads video desteği (Threads gönderileri platform kısıtlamaları nedeniyle tarayıcı oturumu gerektirebilir. Bazı Threads gönderilerinde indirme kuyruğu kullanılamayabilir. Böyle durumlarda bağlantıyı doğrudan inceleyip indirin.)
+## Desteklenen Platformlar
+
+- YouTube — Destekleniyor
+- Instagram — Destekleniyor
+- X / Twitter — Destekleniyor
+- TikTok — Destekleniyor
+- Facebook — Destekleniyor
+- Threads — Destekleniyor
+- Kick — Planlanıyor
+
+## Temel Özellikler
+
+- Video indirme
 - MP4 video ve MP3 ses indirme
+- Oynatma listesi desteği
 - İndirme kuyruğu
-- İndirme hızı sınırı
-- İndirme geçmişi
-- Pano bağlantısı algılama
-- Açık/koyu tema
-- Portable kullanım
-- Windows installer
-- Otomatik güncelleme kontrolü
+- İndirme klasörü seçimi
+- Başarısız işlemleri yeniden deneme
+- Panodan bağlantı algılama
+- Otomatik medya uyumluluk seçenekleri
+- WhatsApp uyumlu MP4 seçeneği
+- Windows masaüstü arayüzü
 
-## Tarayıcı Oturumu Seçenekleri
+## Oturum Merkezi
 
-Bazı içeriklerin indirilebilmesi için ilgili platformda oturum açılmış bir tarayıcı bilgisine ihtiyaç duyulabilir.
+Instagram ve Threads gibi oturum gerektirebilen platformlar için tarayıcı oturumları Loadvia içinden yönetilebilir.
 
-Loadvia hesap parolanızı istemez. Tarayıcı oturum bilgileri yalnız içerik inceleme ve indirme işlemlerinde kullanılır. Çerez dosyaları hesap oturum bilgileri içerebilir; bu dosyaları kimseyle paylaşmayın.
-
-Desteklenen oturum yöntemleri:
-- Otomatik (Önerilen)
-- Oturumsuz
-- Firefox
+Desteklenen tarayıcı altyapısı:
+- Google Chrome
+- Mozilla Firefox
 - Microsoft Edge
-- Chrome
 - Brave
-- Netscape çerez dosyası
+- Opera
+- Opera GX
+- Vivaldi
 
-**Windows Chromium Uyarısı:**
-Windows güvenlik kısıtlamaları nedeniyle Chrome, Edge veya Brave oturum bilgileri bazı sistemlerde okunamayabilir. Böyle durumlarda Firefox veya kullanıcının kendi Netscape çerez dosyası kullanılabilir.
+Ayrıca:
+- Çerez Dosyasıyla Al
+- Aktif oturum kaynağı
+- Profil bilgisi
+- İçe aktarma zamanı
+- Oturumu Test Et
+- Oturum Verilerini Kaldır
+
+## Güvenlik / Gizlilik
+
+- Loadvia önce oturumsuz indirmeyi dener.
+- Gerektiğinde kullanıcı tarafından içe aktarılan oturum kullanılabilir.
+- Kalıcı olarak yalnız gerekli Threads/Instagram oturum verileri saklanır.
+- Oturum bilgileri kullanıcıya özel olarak Windows üzerinde korunur.
+- Çerez değerleri arayüzde gösterilmez.
+- Kullanıcı Oturum Merkezi'nden kayıtlı oturum verilerini kaldırabilir.
+
+## Kurulum
+
+### Setup
+`Loadvia-Setup-1.2.1.exe`
+Normal Windows kurulumu isteyen kullanıcılar için.
+
+### Portable
+`Loadvia-1.2.1-windows-x64-portable.zip`
+Kurulum yapmadan kullanmak isteyenler için. Portable ZIP çıkarıldıktan sonra `Loadvia.exe` çalıştırılır.
+
+## Kullanım
+
+1. Bağlantıyı kopyala/yapıştır.
+2. Loadvia bağlantıyı analiz etsin.
+3. Format/kalite seçeneklerini seç.
+4. İndirme konumunu belirle.
+5. İndirmeyi başlat.
+
+Oturum gereken içeriklerde Oturum Merkezi kullanılabilir.
+
+## Son Sürüm — v1.2.1
+
+- Geliştirilmiş Oturum Merkezi
+- Çoklu tarayıcı oturum desteği
+- Çerez Dosyasıyla Al yardım akışı
+- Aktif oturum kaynağı, profili ve tarihi
+- Tarayıcı kapatıp tekrar deneme sistemi
+- Oturum güvenliği ve kararlılık iyileştirmeleri
+
+Detaylı geçmiş için CHANGELOG.md dosyasına göz atabilirsiniz.
 
 ## Kapsam Sınırı
 
-Uygulama internetteki her içeriği garanti ederek indiremez. Destek; sitenin yapısına, erişim izinlerine ve yt-dlp çıkarıcılarına bağlıdır. Özel hesap içerikleri, silinmiş paylaşımlar, coğrafi kısıtlamalar ve DRM ile korunan yayınlar indirilemeyebilir.
+Uygulama internetteki her içeriği garanti ederek indiremez. Destek; sitenin yapısına, erişim izinlerine ve altyapı bileşenlerine bağlıdır. Özel hesap içerikleri, silinmiş paylaşımlar, coğrafi kısıtlamalar ve DRM ile korunan yayınlar indirilemeyebilir.
 
-Uygulamayı yalnızca sahibi olduğunuz, açıkça indirme izniniz bulunan veya hukuken indirme hakkınız olan içerikler için kullanın. Bu proje erişim kontrolünü veya DRM korumasını aşmaya yönelik özellik içermez.
-
-## Paketler
-
-Uygulamayı iki şekilde kullanabilirsiniz:
-- Kurulumlu (Installer): `Loadvia-Setup-1.2.1.exe`
-- Taşınabilir (Portable): `Loadvia-1.2.1-windows-x64-portable.zip`
-
-## Gelecek Geliştirmeler
-
-- Kick video desteği
-- Threads kuyruk format seçimi iyileştirmesi
+Uygulamayı yalnızca sahibi olduğunuz, açıkça indirme izniniz bulunan veya hukuken indirme hakkınız olan içerikler için kullanın.
 
 ## Gereksinimler
 
