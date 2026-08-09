@@ -99,18 +99,35 @@ class SessionStore:
     def _ensure_dir(self) -> None:
         self.store_dir.mkdir(parents=True, exist_ok=True)
 
-    def save_session(self, cookie_data: str) -> None:
-        """Netscape cookie metnini sifreleyip kaydeder."""
+    def save_session(self, cookie_data: str, metadata: dict | None = None) -> None:
+        """Netscape cookie metnini (ve varsa metadata'yı) sifreleyip kaydeder."""
         if not cookie_data:
             return
 
-        encrypted = _encrypt_data(cookie_data.encode("utf-8"))
+        import json
+
+        if metadata:
+            payload = {"schema_version": 2, **metadata, "cookie_data": cookie_data}
+            data_to_encrypt = json.dumps(payload).encode("utf-8")
+        else:
+            data_to_encrypt = cookie_data.encode("utf-8")
+
+        encrypted = _encrypt_data(data_to_encrypt)
 
         with open(self.store_file, "wb") as f:
             f.write(encrypted)
 
     def load_session(self) -> str | None:
         """Sifreli cookie verisini okur ve cozer."""
+        payload = self.load_session_payload()
+        if not payload:
+            return None
+        if isinstance(payload, dict):
+            return payload.get("cookie_data")
+        return payload
+
+    def load_session_payload(self) -> dict | str | None:
+        """Sifreli veriyi okur ve cozer. V2 semasi ise dict, V1 ise string doner."""
         if not self.store_file.exists():
             return None
 
@@ -122,7 +139,18 @@ class SessionStore:
                 return None
 
             decrypted = _decrypt_data(encrypted_data)
-            return decrypted.decode("utf-8")
+            decrypted_str = decrypted.decode("utf-8")
+
+            import json
+
+            try:
+                payload = json.loads(decrypted_str)
+                if isinstance(payload, dict) and payload.get("schema_version") == 2:
+                    return payload
+            except json.JSONDecodeError:
+                pass
+
+            return decrypted_str
         except Exception:  # noqa: BLE001
             # Bozuk veri veya cozulemeyen veri durumunda none don
             return None

@@ -179,8 +179,11 @@ QPushButton#accentButton:disabled {
 }
 
 
-QPushButton#dangerButton, QPushButton#cancelButton {
+QLabel#warningText, QPushButton#dangerButton, QPushButton#cancelButton {
     color: #dc2626;
+}
+
+QPushButton#dangerButton, QPushButton#cancelButton {
     background: #fef2f2;
     border: 1px solid #fecaca;
     min-height: 38px;
@@ -373,6 +376,7 @@ QLabel#updateDialogMessage {
     border-radius: 6px;
     padding: 10px;
 }
+
 
 QPushButton#dialogPrimaryButton {
     background-color: #2563eb;

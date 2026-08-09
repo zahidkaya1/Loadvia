@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import re
 import sys
+from datetime import datetime
 from pathlib import Path
 from typing import Any
 
@@ -975,3 +976,15 @@ def create_ytdl(options: dict[str, Any]) -> Any:
     downloader = yt_dlp.YoutubeDL(options)
     register_custom_extractors(downloader)
     return downloader
+
+def format_iso_to_local(iso_str: str) -> str:
+    """ISO formatındaki UTC/zaman dilimli timestamp'i yerel kullanıcı dostu formata dönüştürür."""
+    if not iso_str or iso_str == "Bilinmiyor":
+        return "Bilinmiyor"
+
+    try:
+        dt = datetime.fromisoformat(iso_str)
+        local_dt = dt.astimezone()
+        return local_dt.strftime("%d.%m.%Y %H:%M")
+    except (ValueError, TypeError):
+        return iso_str
