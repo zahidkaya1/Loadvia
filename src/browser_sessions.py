@@ -12,6 +12,44 @@ from typing import Any
 
 from src.models import PlatformType, is_rehydration_error
 
+BROWSER_DEFINITIONS = {
+    "firefox": {
+        "display_name": "Firefox",
+        "executable": "firefox.exe",
+        "path_hints": ["Mozilla Firefox"],
+    },
+    "chrome": {
+        "display_name": "Google Chrome",
+        "executable": "chrome.exe",
+        "path_hints": ["Google\\Chrome\\Application"],
+    },
+    "edge": {
+        "display_name": "Microsoft Edge",
+        "executable": "msedge.exe",
+        "path_hints": ["Microsoft\\Edge\\Application"],
+    },
+    "brave": {
+        "display_name": "Brave",
+        "executable": "brave.exe",
+        "path_hints": ["BraveSoftware\\Brave-Browser\\Application"],
+    },
+    "opera": {
+        "display_name": "Opera",
+        "executable": "opera.exe",
+        "path_hints": ["Opera", "Opera Stable", "Opera_Stable"],
+    },
+    "opera_gx": {
+        "display_name": "Opera GX",
+        "executable": "opera.exe",
+        "path_hints": ["Opera GX", "Opera_GX_Stable"],
+    },
+    "vivaldi": {
+        "display_name": "Vivaldi",
+        "executable": "vivaldi.exe",
+        "path_hints": ["Vivaldi\\Application"],
+    },
+}
+
 
 @dataclass(frozen=True, slots=True)
 class BrowserProfileCandidate:
@@ -115,15 +153,25 @@ def _detect_firefox_profiles() -> list[BrowserProfileCandidate]:
 
 
 def _detect_chromium_profiles(
-    browser: str, relative_user_data_path: str, base_priority: int
+    browser: str,
+    relative_user_data_path: str,
+    base_priority: int,
+    is_roaming: bool = False,
 ) -> list[BrowserProfileCandidate]:
     profiles: list[BrowserProfileCandidate] = []
-    local_appdata = os.environ.get("LOCALAPPDATA", "")
-    home = Path.home()
     base_dirs = []
-    if local_appdata:
-        base_dirs.append(Path(local_appdata) / relative_user_data_path)
-    base_dirs.append(home / "AppData" / "Local" / relative_user_data_path)
+    if is_roaming:
+        appdata = os.environ.get("APPDATA", "")
+        home = Path.home()
+        if appdata:
+            base_dirs.append(Path(appdata) / relative_user_data_path)
+        base_dirs.append(home / "AppData" / "Roaming" / relative_user_data_path)
+    else:
+        local_appdata = os.environ.get("LOCALAPPDATA", "")
+        home = Path.home()
+        if local_appdata:
+            base_dirs.append(Path(local_appdata) / relative_user_data_path)
+        base_dirs.append(home / "AppData" / "Local" / relative_user_data_path)
 
     b_title = "Edge" if browser == "edge" else browser.capitalize()
 
@@ -182,6 +230,19 @@ def detect_available_browser_profiles() -> list[BrowserProfileCandidate]:
     all_profiles.extend(
         _detect_chromium_profiles("brave", R"BraveSoftware\Brave-Browser\User Data", 6)
     )
+    all_profiles.extend(
+        _detect_chromium_profiles(
+            "opera", R"Opera Software\Opera Stable", 8, is_roaming=True
+        )
+    )
+    all_profiles.extend(
+        _detect_chromium_profiles(
+            "opera_gx", R"Opera Software\Opera GX Stable", 10, is_roaming=True
+        )
+    )
+
+    # Check Vivaldi just in case
+    all_profiles.extend(_detect_chromium_profiles("vivaldi", R"Vivaldi\User Data", 12))
     return all_profiles
 
 
@@ -542,3 +603,122 @@ def analyze_kick_url(url: str) -> tuple[str | None, str | None]:
         return None, "Geçersiz Kick video bağlantısı veya UUID."
 
     return "Kick VOD videosu algılandı.", None
+
+
+import ctypes
+import time
+from ctypes import wintypes
+
+
+def _get_process_pids_by_executable_path(
+    executable_name: str, path_hints: list[str]
+) -> list[int]:
+    """
+    Belirtilen executable_name ve path_hints iceren process PID'lerini bulur.
+    """
+    psapi = ctypes.WinDLL("psapi")
+    kernel32 = ctypes.WinDLL("kernel32")
+
+    PROCESS_QUERY_INFORMATION = 0x0400
+    PROCESS_VM_READ = 0x0010
+
+    arr = (wintypes.DWORD * 4096)()
+    cb = ctypes.sizeof(arr)
+    cb_needed = wintypes.DWORD()
+    success = psapi.EnumProcesses(ctypes.byref(arr), cb, ctypes.byref(cb_needed))
+    if not success:
+        return []
+
+    count = cb_needed.value // ctypes.sizeof(wintypes.DWORD)
+    pids = [arr[i] for i in range(count)]
+
+    matched_pids = []
+    buffer = ctypes.create_unicode_buffer(32768)
+    size = wintypes.DWORD(32768)
+
+    # Path hints kucuk harf ile arama
+    hints_lower = [h.lower() for h in path_hints]
+    exe_lower = executable_name.lower()
+
+    for pid in pids:
+        h_process = kernel32.OpenProcess(
+            PROCESS_QUERY_INFORMATION | PROCESS_VM_READ, False, pid
+        )
+        if h_process:
+            size.value = 32768
+            if kernel32.QueryFullProcessImageNameW(
+                h_process, 0, buffer, ctypes.byref(size)
+            ):
+                full_path = buffer.value.lower()
+                if exe_lower in full_path:
+                    if not hints_lower or any(
+                        hint in full_path for hint in hints_lower
+                    ):
+                        matched_pids.append(pid)
+            kernel32.CloseHandle(h_process)
+
+    return matched_pids
+
+
+def is_browser_running(browser: str) -> bool:
+    defn = BROWSER_DEFINITIONS.get(browser)
+    if not defn:
+        return False
+    pids = _get_process_pids_by_executable_path(defn["executable"], defn["path_hints"])
+    return len(pids) > 0
+
+
+def close_browser_gracefully(browser: str) -> bool:
+    defn = BROWSER_DEFINITIONS.get(browser)
+    if not defn:
+        return False
+
+    pids = _get_process_pids_by_executable_path(defn["executable"], defn["path_hints"])
+    if not pids:
+        return True  # Zaten kapali
+
+    user32 = ctypes.WinDLL("user32")
+    WM_CLOSE = 0x0010
+
+    def enum_windows_proc(hwnd, lParam):
+        pid = wintypes.DWORD()
+        user32.GetWindowThreadProcessId(hwnd, ctypes.byref(pid))
+        if pid.value in pids:
+            if user32.IsWindowVisible(hwnd):
+                user32.PostMessageW(hwnd, WM_CLOSE, 0, 0)
+        return True
+
+    WNDENUMPROC = ctypes.WINFUNCTYPE(wintypes.BOOL, wintypes.HWND, wintypes.LPARAM)
+    user32.EnumWindows(WNDENUMPROC(enum_windows_proc), 0)
+
+    time.sleep(3.0)
+
+    remaining = _get_process_pids_by_executable_path(
+        defn["executable"], defn["path_hints"]
+    )
+    return len(remaining) == 0
+
+
+def force_kill_browser(browser: str) -> bool:
+    defn = BROWSER_DEFINITIONS.get(browser)
+    if not defn:
+        return False
+
+    pids = _get_process_pids_by_executable_path(defn["executable"], defn["path_hints"])
+    if not pids:
+        return True
+
+    kernel32 = ctypes.WinDLL("kernel32")
+    PROCESS_TERMINATE = 0x0001
+
+    for pid in pids:
+        h_process = kernel32.OpenProcess(PROCESS_TERMINATE, False, pid)
+        if h_process:
+            kernel32.TerminateProcess(h_process, 1)
+            kernel32.CloseHandle(h_process)
+
+    time.sleep(1.0)
+    remaining = _get_process_pids_by_executable_path(
+        defn["executable"], defn["path_hints"]
+    )
+    return len(remaining) == 0

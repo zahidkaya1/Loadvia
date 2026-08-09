@@ -1,6 +1,20 @@
 # Changelog
 Tüm önemli değişiklikler bu dosyada belgelenmektedir.
 
+## [1.2.1]
+### Eklendi & İyileştirildi
+- Geliştirilmiş Oturum Merkezi
+- Platform bazlı oturum ve indirme durumları
+- Aktif oturum kaynağı ve profil bilgisi
+- Google Chrome / Firefox / Edge / Brave / Opera / Opera GX / Vivaldi tarayıcı oturumu içe aktarma altyapısı
+- Tarayıcıyı Kapat ve Tekrar Dene akışı
+- Güvenli PID/executable-path tabanlı browser process izolasyonu
+- Çerez Dosyasıyla Al ve kullanıcı dostu yardım akışı
+- SessionStore schema v2 metadata
+- v1.2.0 session verileriyle geriye dönük uyumluluk
+- Yerel tarih/saat gösterimi
+- Oturum ve UI regresyon düzeltmeleri
+
 ## [1.2.0]
 ### Eklendi & İyileştirildi
 - Oturum Merkezi eklendi
