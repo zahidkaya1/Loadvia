@@ -9,6 +9,23 @@ from src.models import (
     detect_platform_type,
 )
 
+VIDEO_QUALITIES = [
+    "En iyi kullanılabilir kalite",
+    "2160p'ye kadar",
+    "1440p'ye kadar",
+    "1080p'ye kadar",
+    "720p'ye kadar",
+    "480p'ye kadar",
+    "360p'ye kadar",
+]
+
+AUDIO_QUALITIES = [
+    "320 kbps (En iyi)",
+    "256 kbps",
+    "192 kbps",
+    "128 kbps",
+]
+
 QUALITY_HEIGHTS: dict[str, int | None] = {
     "En iyi kullanılabilir kalite": None,
     "En iyi kalite": None,

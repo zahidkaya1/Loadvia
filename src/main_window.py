@@ -61,6 +61,7 @@ from src.dialogs import (
     SessionRetryDialog,
     UpdateAvailableDialog,
 )
+from src.download_options import VIDEO_QUALITIES
 from src.download_worker import DownloadWorker
 from src.history import (
     HistoryValidationWorker,
@@ -364,14 +365,7 @@ class MainWindow(QMainWindow):
 
         self.quality_combo = NoWheelComboBox()
         self.quality_combo.setObjectName("qualityCombo")
-        self.quality_combo.addItems(
-            [
-                "En iyi kullanılabilir kalite",
-                "1080p'ye kadar",
-                "720p'ye kadar",
-                "480p'ye kadar",
-            ]
-        )
+        self.quality_combo.addItems(VIDEO_QUALITIES)
         self.quality_combo.currentTextChanged.connect(self._on_quality_changed)
         configure_combo_box(self.quality_combo)
 
@@ -798,14 +792,7 @@ class MainWindow(QMainWindow):
             for h in meta.available_heights:
                 self.quality_combo.addItem(f"{h}p'ye kadar")
         else:
-            self.quality_combo.addItems(
-                [
-                    "1080p'ye kadar",
-                    "720p'ye kadar",
-                    "480p'ye kadar",
-                    "360p'ye kadar",
-                ]
-            )
+            self.quality_combo.addItems(VIDEO_QUALITIES[1:])
 
         find_idx = self.quality_combo.findText(current_sel)
         if find_idx < 0 and current_sel:

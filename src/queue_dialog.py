@@ -26,6 +26,7 @@ from PySide6.QtWidgets import (
 
 from src.config import APP_NAME
 from src.dialogs import AppMessageDialog
+from src.download_options import AUDIO_QUALITIES, VIDEO_QUALITIES
 from src.models import QueueItem
 from src.utils import (
     apply_pointing_hand_cursor,
@@ -262,24 +263,9 @@ class QueueItemEditDialog(QDialog):
         current = self.quality_combo.currentText()
         self.quality_combo.clear()
         if "Ses" in media_text or "MP3" in media_text:
-            self.quality_combo.addItems(
-                [
-                    "320 kbps (En iyi)",
-                    "256 kbps",
-                    "192 kbps",
-                    "128 kbps",
-                ]
-            )
+            self.quality_combo.addItems(AUDIO_QUALITIES)
         else:
-            self.quality_combo.addItems(
-                [
-                    "En iyi kullanılabilir kalite",
-                    "1080p'ye kadar",
-                    "720p'ye kadar",
-                    "480p'ye kadar",
-                    "360p'ye kadar",
-                ]
-            )
+            self.quality_combo.addItems(VIDEO_QUALITIES)
         idx = self.quality_combo.findText(current)
         if idx >= 0:
             self.quality_combo.setCurrentIndex(idx)
@@ -617,24 +603,9 @@ class DownloadQueueDialog(QDialog):
         current = self.quality_combo.currentText()
         self.quality_combo.clear()
         if "Ses" in media_text or "MP3" in media_text:
-            self.quality_combo.addItems(
-                [
-                    "320 kbps (En iyi)",
-                    "256 kbps",
-                    "192 kbps",
-                    "128 kbps",
-                ]
-            )
+            self.quality_combo.addItems(AUDIO_QUALITIES)
         else:
-            self.quality_combo.addItems(
-                [
-                    "En iyi kullanılabilir kalite",
-                    "1080p'ye kadar",
-                    "720p'ye kadar",
-                    "480p'ye kadar",
-                    "360p'ye kadar",
-                ]
-            )
+            self.quality_combo.addItems(VIDEO_QUALITIES)
         idx = self.quality_combo.findText(current)
         if idx >= 0:
             self.quality_combo.setCurrentIndex(idx)
