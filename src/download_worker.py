@@ -23,7 +23,7 @@ from src.browser_sessions import (
     is_browser_cookie_lock_error,
     is_chromium_encryption_error,
 )
-from src.download_options import build_ydl_options
+from src.download_options import build_ydl_options, parse_audio_quality
 from src.history import DownloadRecord, save_record
 from src.models import (
     DownloadRequest,
@@ -428,6 +428,7 @@ class DownloadWorker(QObject):
         from src.utils import is_valid_kick_manifest_url, validate_final_download
 
         is_audio = "MP3" in self.request.media_type or "Ses" in self.request.media_type
+        audio_bitrate_k = f"{parse_audio_quality(self.request.quality)}k"
 
         target_final_path = self.request.target_final_path
         if not target_final_path or target_final_path.stem.lower() in {
@@ -649,7 +650,7 @@ class DownloadWorker(QObject):
                 "-c:a",
                 "libmp3lame",
                 "-b:a",
-                "192k",
+                audio_bitrate_k,
                 str(target_final_path),
             ]
         else:
@@ -766,7 +767,7 @@ class DownloadWorker(QObject):
                 "-c:a",
                 "aac",
                 "-b:a",
-                "192k",
+                audio_bitrate_k,
                 str(target_final_path),
             ]
             ret_fallback = _run_ffmpeg_cmd(cmd_fallback)

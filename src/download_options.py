@@ -42,6 +42,22 @@ def parse_quality_height(quality: str) -> int | None:
     return None
 
 
+def parse_audio_quality(quality: str) -> str:
+    """MP3 kalite metnini yt-dlp ve ffmpeg için kbps (str) değerine dönüştürür.
+    Desteklenen değerler: 320, 256, 192, 128. Varsayılan: 192.
+    """
+    if not quality:
+        return "192"
+
+    match = re.search(r"(\d{3})\s*kbps", str(quality).lower())
+    if match:
+        bitrate = match.group(1)
+        if bitrate in ("320", "256", "192", "128"):
+            return bitrate
+
+    return "192"
+
+
 def _video_format(quality: str) -> str:
     height = parse_quality_height(quality)
     if height is None:
@@ -165,6 +181,7 @@ def build_ydl_options(request: DownloadRequest) -> dict[str, Any]:
         options["playlist_items"] = "1"
 
     if request.media_type == "Ses (MP3)":
+        audio_quality = parse_audio_quality(request.quality)
         options.update(
             {
                 "format": "bestaudio/best",
@@ -172,7 +189,7 @@ def build_ydl_options(request: DownloadRequest) -> dict[str, Any]:
                     {
                         "key": "FFmpegExtractAudio",
                         "preferredcodec": "mp3",
-                        "preferredquality": "192",
+                        "preferredquality": audio_quality,
                     }
                 ],
             }
