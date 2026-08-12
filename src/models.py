@@ -667,6 +667,7 @@ class DownloadRequest:
     rate_limit_bps: int | None = None
     session_method: SessionMethod = SessionMethod.AUTO
     cookie_file_path: Path | None = None
+    media_items: list[MediaItem] = field(default_factory=list)
 
 
 @dataclass(slots=True)
@@ -687,6 +688,7 @@ class QueueItem:
     rate_limit_bps: int | None = None
     session_method: str = "auto"
     cookie_file_path: str | Path | None = None
+    media_items: list[MediaItem] = field(default_factory=list)
 
 
 @dataclass

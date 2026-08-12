@@ -1399,6 +1399,20 @@ class MainWindow(QMainWindow):
         quality = self.quality_combo.currentText()
         playlist = self.playlist_checkbox.isChecked()
 
+        selected_media_items = []
+        is_carousel = (
+            self._current_metadata
+            and len(self._current_metadata.media_items) > 1
+            and platform_now in (PlatformType.INSTAGRAM_POST, PlatformType.INSTAGRAM_REEL)
+        )
+        if is_carousel:
+            from src.media_selector_dialog import MediaSelectorDialog
+            dialog = MediaSelectorDialog(self._current_metadata.media_items, self)
+            if dialog.exec() == QDialog.DialogCode.Accepted:
+                selected_media_items = list(dialog.get_selected_items())
+            else:
+                return
+
         if "MP3" in media_type or "Ses" in media_type:
             ext = "mp3"
         elif "Fotoğraf" in media_type:
@@ -1501,6 +1515,7 @@ class MainWindow(QMainWindow):
             rate_limit_bps=current_rate_limit,
             session_method=getattr(self, "_active_session_method", SessionMethod.AUTO),
             cookie_file_path=getattr(self, "_active_cookie_file_path", None),
+            media_items=selected_media_items,
         )
 
         self._set_ui_downloading(True)
@@ -2191,6 +2206,7 @@ class MainWindow(QMainWindow):
         playlist: bool | None = None,
         output_dir: Path | None = None,
         rate_limit_bps: int | None | object = ...,
+        media_items: list | None = None,
     ) -> None:
         added_count = 0
         media_type = media_type or self.media_combo.currentText()
@@ -2239,6 +2255,7 @@ class MainWindow(QMainWindow):
                 output_dir=output_dir,
                 browser=browser,
                 rate_limit_bps=rate_limit_bps,
+                media_items=media_items if media_items else [],
             )
             self._queue_items.append(q_item)
             added_count += 1
@@ -2284,6 +2301,17 @@ class MainWindow(QMainWindow):
 
         valid = extract_supported_urls_from_text(url)
         if valid:
+            selected_media_items = []
+            if len(valid) == 1 and self._current_metadata:
+                platform_now = detect_platform_type(valid[0])
+                if platform_now in (PlatformType.INSTAGRAM_POST, PlatformType.INSTAGRAM_REEL) and len(self._current_metadata.media_items) > 1:
+                    from src.media_selector_dialog import MediaSelectorDialog
+                    dialog = MediaSelectorDialog(self._current_metadata.media_items, self)
+                    if dialog.exec() == QDialog.DialogCode.Accepted:
+                        selected_media_items = list(dialog.get_selected_items())
+                    else:
+                        return
+
             self._on_queue_urls_added(
                 valid,
                 media_type=media_type,
@@ -2293,6 +2321,7 @@ class MainWindow(QMainWindow):
                 rate_limit_bps=self.get_current_rate_limit_bps()
                 if rate_limit_bps is ...
                 else rate_limit_bps,
+                media_items=selected_media_items,
             )
         else:
             AppMessageDialog(
@@ -2489,6 +2518,7 @@ class MainWindow(QMainWindow):
                 rate_limit_bps=item.rate_limit_bps,
                 session_method=item.session_method,
                 cookie_file_path=item.cookie_file_path,
+                media_items=item.media_items if hasattr(item, 'media_items') else [],
             )
 
             self._download_succeeded_result = None

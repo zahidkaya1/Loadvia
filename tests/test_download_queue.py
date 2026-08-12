@@ -337,3 +337,85 @@ def test_queue_settings_controls_and_item_editing(main_window, monkeypatch):
     dlg.table.selectRow(1)
     dlg._on_edit_clicked()
     assert warn_shown is True
+
+
+def test_queue_snapshot_preserves_indexes_and_avoids_dialog(main_window, monkeypatch):
+    """Test that QueueItem saves a snapshot of media_items, and worker doesn't open dialog."""
+    from unittest.mock import patch
+
+    from PySide6.QtWidgets import QDialog
+
+    from src.models import MediaItem, MediaMetadata, MediaType
+    meta = MediaMetadata(
+        webpage_url="https://instagram.com/p/C-123456789/",
+        title="Carousel Queue",
+        media_items=[
+            MediaItem(media_type=MediaType.IMAGE, index=0, url="http://img0"),
+            MediaItem(media_type=MediaType.IMAGE, index=1, url="http://img1"),
+            MediaItem(media_type=MediaType.VIDEO, index=2, url="http://vid2"),
+            MediaItem(media_type=MediaType.IMAGE, index=3, url="http://img3"),
+            MediaItem(media_type=MediaType.IMAGE, index=4, url="http://img4")
+        ]
+    )
+    main_window.url_input.setText("https://instagram.com/p/C-123456789/")
+    main_window._current_metadata = meta
+    with patch("src.media_selector_dialog.MediaSelectorDialog") as MockDialog:
+        mock_instance = MockDialog.return_value
+        mock_instance.exec.return_value = QDialog.DialogCode.Accepted
+        # User selects index 1 and 4
+        mock_instance.get_selected_items.return_value = [
+            meta.media_items[1], meta.media_items[4]
+        ]
+
+        main_window._on_queue_current_url_added()
+
+        # Dialog opened once during queue addition
+        assert mock_instance.exec.call_count == 1
+
+        assert len(main_window._queue_items) == 1
+        q_item = main_window._queue_items[0]
+
+        # Queue item has exactly [1, 4]
+        assert len(q_item.media_items) == 2
+        assert q_item.media_items[0].index == 1
+        assert q_item.media_items[1].index == 4
+
+        # Original metadata is unchanged
+        assert len(meta.media_items) == 5
+        # Mock thread to capture the DownloadRequest
+        with patch("src.download_worker.DownloadWorker.run"):
+            main_window._start_queue_download(q_item, meta)
+
+            assert main_window._download_worker is not None
+            request = main_window._download_worker.request
+            assert len(request.media_items) == 2
+            assert request.media_items[0].index == 1
+            assert request.media_items[1].index == 4
+
+
+def test_raw_queue_url_fallback(main_window, monkeypatch):
+    """Test that a raw URL added from QueueDialog has media_items=[] and falls back without opening dialog."""
+    from unittest.mock import patch
+
+    # Direct raw url without metadata analysis
+    url = "https://instagram.com/p/C-123456789/"
+    main_window._on_queue_urls_added([url])
+
+    assert len(main_window._queue_items) == 1
+    q_item = main_window._queue_items[0]
+
+    assert q_item.media_items == []
+    with (
+        patch("src.media_selector_dialog.MediaSelectorDialog") as MockDialog,
+        patch("src.download_worker.DownloadWorker.run")
+    ):
+        # Simulating backend having fetched metadata
+        from src.models import MediaMetadata
+        meta = MediaMetadata(webpage_url=url, title="Raw", media_items=[])
+        main_window._start_queue_download(q_item, meta)
+
+        # Dialog NEVER called when starting download from queue
+        assert MockDialog.call_count == 0
+        assert main_window._download_worker is not None
+        request = main_window._download_worker.request
+        assert request.media_items == []

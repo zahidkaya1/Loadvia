@@ -1714,7 +1714,7 @@ class DownloadWorker(QObject):
 
         from src.history import reserve_unique_media_path, sanitize_filename
 
-        items = extract_media_items(info)
+        items = self.request.media_items if self.request.media_items else extract_media_items(info)
         if not items:
             self.failed.emit("Carousel gönderisinde indirilebilir medya bulunamadı.")
             return
@@ -1732,19 +1732,20 @@ class DownloadWorker(QObject):
         base_title_sanitized = sanitize_filename(base_title)
         out_dir = self.request.output_dir
 
-        for idx, item in enumerate(items, start=1):
+        for ui_idx, item in enumerate(items, start=1):
             if self._cancel_requested:
                 self.cancelled.emit()
                 return
 
-            self.status.emit(f"({idx}/{total}) İndiriliyor...")
+            self.status.emit(f"({ui_idx}/{total}) İndiriliyor...")
             self.progress.emit(0)
 
-            padded_idx = f"{idx:02d}"
+            actual_idx = item.index + 1
+            padded_idx = f"{actual_idx:02d}"
             item_base_name = f"{base_title_sanitized}_{padded_idx}"
 
             entries = info.get("entries", [])
-            raw_entry = entries[idx - 1] if 0 <= idx - 1 < len(entries) else info
+            raw_entry = entries[item.index] if entries and 0 <= item.index < len(entries) else info
 
             if item.media_type == MediaType.IMAGE:
                 try:
@@ -1764,7 +1765,7 @@ class DownloadWorker(QObject):
                     else:
                         failure_count += 1
                 except Exception as e:  # noqa: BLE001
-                    self.log.emit(f"({idx}/{total}) Fotoğraf indirilemedi: {e}")
+                    self.log.emit(f"({ui_idx}/{total}) Fotoğraf indirilemedi: {e}")
                     failure_count += 1
             else:
                 try:
@@ -1790,7 +1791,7 @@ class DownloadWorker(QObject):
 
                     success_count += 1
                 except Exception as e:  # noqa: BLE001
-                    self.log.emit(f"({idx}/{total}) Video indirilemedi: {e}")
+                    self.log.emit(f"({ui_idx}/{total}) Video indirilemedi: {e}")
                     failure_count += 1
 
         if success_count == 0:
