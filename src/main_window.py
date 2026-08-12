@@ -359,7 +359,7 @@ class MainWindow(QMainWindow):
 
         self.media_combo = NoWheelComboBox()
         self.media_combo.setObjectName("mediaTypeCombo")
-        self.media_combo.addItems(["Video (MP4)", "Ses (MP3)"])
+        self.media_combo.addItems(["Video (MP4)", "Ses (MP3)", "Fotoğraf (JPG/PNG)"])
         self.media_combo.currentTextChanged.connect(self._on_media_type_changed)
         configure_combo_box(self.media_combo)
 
@@ -734,6 +734,12 @@ class MainWindow(QMainWindow):
 
     def _on_metadata_ready(self, meta: MediaMetadata) -> None:
         self._current_metadata = meta
+        from src.models import MediaType
+        has_video = any(mi.media_type == MediaType.VIDEO for mi in meta.media_items)
+        has_image = any(mi.media_type == MediaType.IMAGE for mi in meta.media_items)
+        if has_image and not has_video:
+            self.media_combo.setCurrentText("Fotoğraf (JPG/PNG)")
+
         self._preferred_browser = meta.session_browser
         self._preferred_profile = meta.session_profile
         self._preferred_impersonation = meta.preferred_impersonation
@@ -1205,11 +1211,17 @@ class MainWindow(QMainWindow):
     def _on_media_type_changed(self, text: str = "") -> None:
         media_text = text if text else self.media_combo.currentText()
         is_audio = "MP3" in media_text or "Ses" in media_text
-        self.quality_combo.setEnabled(not is_audio)
+        is_photo = "Fotoğraf" in media_text
+        self.quality_combo.setEnabled(not (is_audio or is_photo))
         if is_audio:
             self.quality_label.setText("Ses kalitesi:")
             self.quality_combo.setToolTip(
-                "MP3 formatı için 192 kbps sabit ses kalitesi kullanılır."
+                "MP3 formatı için sabit ses kalitesi kullanılır."
+            )
+        elif is_photo:
+            self.quality_label.setText("Fotoğraf kalitesi:")
+            self.quality_combo.setToolTip(
+                "Fotoğraf için orijinal kalite kullanılır."
             )
         else:
             self.quality_label.setText("Video kalitesi:")
@@ -1382,7 +1394,12 @@ class MainWindow(QMainWindow):
         quality = self.quality_combo.currentText()
         playlist = self.playlist_checkbox.isChecked()
 
-        ext = "mp3" if ("MP3" in media_type or "Ses" in media_type) else "mp4"
+        if "MP3" in media_type or "Ses" in media_type:
+            ext = "mp3"
+        elif "Fotoğraf" in media_type:
+            ext = self._current_metadata.selected_extension if (self._current_metadata and self._current_metadata.selected_extension and self._current_metadata.selected_extension != "mp4") else "jpg"
+        else:
+            ext = "mp4"
         raw_title = (
             self._current_metadata.title
             if (self._current_metadata and self._current_metadata.title)

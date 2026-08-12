@@ -239,7 +239,7 @@ class DownloadWorker(QObject):
                 if isinstance(data.get("info_dict"), dict)
                 else ""
             )
-            if "MP3" in self.request.media_type or "Ses" in self.request.media_type:
+            if "MP3" in self.request.media_type or "Fotoğraf" in self.request.media_type or "image" in self.request.media_type.lower() or "Ses" in self.request.media_type:
                 phase = "audio_downloading"
             elif vcodec != "none" and acodec == "none":
                 phase = "video_downloading"
@@ -984,6 +984,10 @@ class DownloadWorker(QObject):
                             self.cancelled.emit()
                             return
 
+                        if self.request.media_type and "image" in self.request.media_type.lower():
+                            self._download_image_directly(info, platform)
+                            return
+
                         is_playlist = self.request.playlist or (
                             isinstance(info, dict) and info.get("_type") == "playlist"
                         )
@@ -1183,6 +1187,10 @@ class DownloadWorker(QObject):
 
                         if self._cancel_requested:
                             self.cancelled.emit()
+                            return
+
+                        if self.request.media_type and ("Fotoğraf" in self.request.media_type or "image" in self.request.media_type.lower()):
+                            self._download_image_directly(info, platform)
                             return
 
                         is_playlist = self.request.playlist or (
@@ -1676,6 +1684,155 @@ class DownloadWorker(QObject):
                     all_clean = False
 
         return all_clean
+
+    def _download_image_directly(self, info: dict[str, Any], platform: PlatformType) -> None:
+        """yt-dlp'yi atlayarak fotoğrafı doğrudan HTTP ile indirir."""
+        from src.history import reserve_unique_media_path
+        from src.models import MediaType, extract_media_items
+
+        items = extract_media_items(info)
+        image_items = [i for i in items if i.media_type == MediaType.IMAGE]
+
+        if not image_items:
+            self.failed.emit("Bu gönderide indirilebilir fotoğraf bulunamadı.")
+            return
+
+        item = image_items[0]
+        if not item.url:
+            self.failed.emit("Fotoğraf için geçerli bir medya bağlantısı bulunamadı.")
+            return
+
+        image_url = item.url
+
+        try:
+            from curl_cffi import requests as cffi_requests
+        except ImportError:
+            self.failed.emit("curl_cffi kütüphanesi eksik.")
+            return
+
+        headers = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        }
+
+        # Referer for specific platforms
+        if "instagram.com" in self.request.url:
+            headers["Referer"] = "https://www.instagram.com/"
+        elif "tiktok.com" in self.request.url:
+            headers["Referer"] = "https://www.tiktok.com/"
+
+        # Retrieve cookies if any
+        cookies_dict = {}
+        if self.request.cookie_file_path or self.request.session_method not in (None, "none", "auto"):
+            from src.session_manager import SessionManager
+            session_mgr = SessionManager()
+            data = session_mgr.store.load_session()
+            if data:
+                for line in data.strip().split('\n'):
+                    if not line or line.startswith('#'): continue
+                    parts = line.split('\t')
+                    if len(parts) >= 7:
+                        cookies_dict[parts[5]] = parts[6]
+
+        self.status.emit("Fotoğraf indiriliyor...")
+        self.log.emit(f"HTTP üzerinden fotoğraf indiriliyor: {image_url}")
+
+        try:
+            r = cffi_requests.get(
+                image_url,
+                headers=headers,
+                cookies=cookies_dict,
+                impersonate="chrome120",
+                stream=True,
+                timeout=15
+            )
+
+            if r.status_code == 404:
+                self.failed.emit("Fotoğraf silinmiş veya erişilemiyor (404).")
+                return
+            elif r.status_code == 403:
+                self.failed.emit("Fotoğrafa erişim reddedildi (403). Oturum süresi dolmuş olabilir.")
+                return
+            elif r.status_code != 200:
+                self.failed.emit(f"Sunucu hatası ({r.status_code}). Daha sonra tekrar deneyin.")
+                return
+
+            # Determine extension
+            ext = "jpg"
+            content_type = r.headers.get("Content-Type", "").lower()
+            if "png" in content_type: ext = "png"
+            elif "webp" in content_type: ext = "webp"
+            elif "jpeg" in content_type or "jpg" in content_type: ext = "jpg"
+            else:
+                # fallback from URL
+                if ".png" in image_url.lower(): ext = "png"
+                elif ".webp" in image_url.lower(): ext = "webp"
+
+            # Determine Target Path
+            target_path = self.request.target_final_path
+            if not target_path:
+                title = item.title or info.get("title") or "Fotoğraf"
+                media_id = item.id or info.get("id") or str(uuid.uuid4())[:8]
+                base_name = f"{title} [{media_id}]"
+                target_path = reserve_unique_media_path(
+                    self.request.output_dir, base_name, ext
+                )
+                self._last_filename = target_path.name
+                self._current_reserved_paths.append(target_path)
+
+
+            temp_path = target_path.with_suffix(".temp")
+            self._created_files.add(temp_path)
+
+            total_size = int(r.headers.get("Content-Length", 0))
+            downloaded = 0
+
+            with open(temp_path, "wb") as f:
+                for chunk in r.iter_content(chunk_size=8192):
+                    if self._cancel_requested:
+                        self.cancelled.emit()
+                        return
+                    if chunk:
+                        f.write(chunk)
+                        downloaded += len(chunk)
+                        if total_size > 0:
+                            pct = (downloaded / total_size) * 100
+                            self.progress.emit(int(pct))
+                            self.progress_details.emit({
+                                "speed": _human_speed(0),
+                                "downloaded_bytes": f"{_human_speed(downloaded)} / {_human_speed(total_size)}",
+                                "total_bytes": ""
+                            })
+
+            if temp_path.exists():
+                temp_path.rename(target_path)
+
+
+            # Save history record
+            rec = DownloadRecord(
+                platform=platform.value if platform != PlatformType.UNKNOWN else "unknown",
+                media_id=item.id or info.get("id") or "",
+                media_type=self.request.media_type,
+                requested_quality=self.request.quality,
+                selected_height=item.height or info.get("height"),
+                final_path=str(target_path.resolve()),
+                state="completed",
+                file_size=target_path.stat().st_size if target_path.exists() else 0,
+                completed_at=datetime.datetime.now(datetime.timezone.utc).isoformat(),
+                video_codec="",
+                audio_codec="",
+                playlist=self.request.playlist,
+                title=item.title or info.get("title") or target_path.stem,
+                source_url=self.request.url,
+            )
+            save_record(rec)
+
+            self.progress.emit(100)
+            self.status.emit("İndirme tamamlandı")
+            self.succeeded.emit(str(target_path.resolve()))
+
+        except Exception as e:
+            self.log.emit(f"Fotoğraf indirilirken bağlantı hatası oluştu: {e}")
+            raise
 
     def _safe_unlink(
         self, path_obj: Path, retries: int = 15, delay: float = 0.1

@@ -81,7 +81,7 @@ class QueueItemEditDialog(QDialog):
 
         media_label = QLabel("Dosya Türü:")
         self.media_combo = QComboBox()
-        self.media_combo.addItems(["Video (MP4)", "Ses (MP3)"])
+        self.media_combo.addItems(["Video (MP4)", "Ses (MP3)", "Fotoğraf (JPG/PNG)"])
         idx = self.media_combo.findText(item.media_type)
         if idx >= 0:
             self.media_combo.setCurrentIndex(idx)
@@ -347,7 +347,7 @@ class DownloadQueueDialog(QDialog):
 
         media_label = QLabel("Tür:")
         self.media_combo = QComboBox()
-        self.media_combo.addItems(["Video (MP4)", "Ses (MP3)"])
+        self.media_combo.addItems(["Video (MP4)", "Ses (MP3)", "Fotoğraf (JPG/PNG)"])
         self.media_combo.currentTextChanged.connect(self._on_media_type_changed)
 
         quality_label = QLabel("Kalite:")
