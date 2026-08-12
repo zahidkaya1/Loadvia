@@ -25,7 +25,7 @@ def main() -> int:
         try:
             import ctypes
 
-            app_id = "zahidkaya.Loadvia.1.2.1"
+            app_id = "zahidkaya.Loadvia.1.3.0"
             ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(app_id)
         except Exception:  # noqa: BLE001, S110
             pass

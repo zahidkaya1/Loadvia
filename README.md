@@ -2,7 +2,7 @@
 
 YouTube, Instagram, X/Twitter, TikTok, Facebook ve Threads gibi platformlardan medya indirmeyi kolaylaştıran Windows masaüstü uygulaması.
 
-Güncel kararlı sürüm: **v1.2.1**
+Güncel kararlı sürüm: **v1.3.0**
 
 ## Desteklenen Platformlar
 
@@ -16,14 +16,14 @@ Güncel kararlı sürüm: **v1.2.1**
 
 ## Temel Özellikler
 
-- Video indirme
-- MP4 video ve MP3 ses indirme
-- Oynatma listesi desteği
+- Instagram tek fotoğraf indirme
+- Instagram çoklu fotoğraf/video (carousel) indirme
+- Carousel içeriklerinde istenen medyaları seçebilme
 - İndirme kuyruğu
 - İndirme klasörü seçimi
 - Başarısız işlemleri yeniden deneme
 - Panodan bağlantı algılama
-- Otomatik medya uyumluluk seçenekleri
+- Sadeleştirilmiş kalite ve format seçenekleri
 - WhatsApp uyumlu MP4 seçeneği
 - Windows masaüstü arayüzü
 
@@ -60,11 +60,11 @@ Ayrıca:
 ## Kurulum
 
 ### Setup
-`Loadvia-Setup-1.2.1.exe`
+`Loadvia-Setup-1.3.0.exe`
 Normal Windows kurulumu isteyen kullanıcılar için.
 
 ### Portable
-`Loadvia-1.2.1-windows-x64-portable.zip`
+`Loadvia-1.3.0-windows-x64-portable.zip`
 Kurulum yapmadan kullanmak isteyenler için. Portable ZIP çıkarıldıktan sonra `Loadvia.exe` çalıştırılır.
 
 ## Kullanım
@@ -77,14 +77,14 @@ Kurulum yapmadan kullanmak isteyenler için. Portable ZIP çıkarıldıktan sonr
 
 Oturum gereken içeriklerde Oturum Merkezi kullanılabilir.
 
-## Son Sürüm — v1.2.1
+## Son Sürüm — v1.3.0
 
-- Geliştirilmiş Oturum Merkezi
-- Çoklu tarayıcı oturum desteği
-- Çerez Dosyasıyla Al yardım akışı
-- Aktif oturum kaynağı, profili ve tarihi
-- Tarayıcı kapatıp tekrar deneme sistemi
-- Oturum güvenliği ve kararlılık iyileştirmeleri
+- Instagram tek fotoğraf indirme desteği eklendi
+- Instagram fotoğraf/video carousel indirme desteği eklendi
+- Carousel içinden istenilen medyaları tek tek seçebilme özelliği eklendi (Fotoğraf + Video karışık carousel desteği)
+- Orijinal medya sırasını koruyan dosya adlandırması eklendi
+- Video ve ses indirmeleri için kalite/format seçenekleri daha sade ve ortak bir yapıya geçirildi
+- Ses/MP3 kalite seçimiyle ilgili indirme sorunları giderildi
 
 Detaylı geçmiş için CHANGELOG.md dosyasına göz atabilirsiniz.
 

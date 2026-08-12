@@ -1,6 +1,20 @@
 # Changelog
 Tüm önemli değişiklikler bu dosyada belgelenmektedir.
 
+## [1.3.0] - 2026-08-12
+### Yeni
+- Instagram tek fotoğraf indirme desteği.
+- Instagram fotoğraf/video carousel desteği.
+- Carousel içerisindeki medyaları tek tek seçebilmek için medya seçici arayüzü.
+- Karma fotoğraf/video carousel desteği.
+
+### İyileştirmeler
+- Kalite/format seçenekleri ortak ve daha tutarlı bir yapıya getirildi.
+- Carousel dosya adlarında gönderideki orijinal medya sırası korunuyor.
+
+### Düzeltmeler
+- MP3 kalite seçimiyle ilgili indirme sorunları giderildi.
+
 ## [1.2.1]
 ### Eklendi & İyileştirildi
 - Geliştirilmiş Oturum Merkezi
