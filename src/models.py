@@ -28,6 +28,102 @@ class PlatformType(Enum):
     UNKNOWN = "unknown"
 
 
+class MediaType(Enum):
+    VIDEO = "video"
+    AUDIO = "audio"
+    IMAGE = "image"
+    GIF = "gif"
+    UNKNOWN = "unknown"
+
+
+@dataclass
+class MediaItem:
+    media_type: MediaType
+    id: str | None = None
+    url: str | None = None
+    thumbnail: str | None = None
+    width: int | None = None
+    height: int | None = None
+    duration: float | None = None
+    index: int = 0
+    title: str | None = None
+
+
+def _determine_media_type(info: dict) -> MediaType:
+    ext = info.get("ext", "").lower()
+    vcodec = info.get("vcodec")
+    acodec = info.get("acodec")
+
+    if ext in ("jpg", "jpeg", "png", "webp"):
+        return MediaType.IMAGE
+    if ext == "gif":
+        return MediaType.GIF
+
+    if vcodec == "none":
+        if acodec and acodec != "none":
+            return MediaType.AUDIO
+        # vcodec="none" and acodec="none" / missing -> could be an image or just unknown without ext
+        if ext in ("m4a", "mp3", "wav", "ogg", "aac", "flac"):
+            return MediaType.AUDIO
+    else:
+        if vcodec and vcodec != "none":
+            return MediaType.VIDEO
+        if ext in ("mp4", "webm", "mov", "mkv", "m4v"):
+            return MediaType.VIDEO
+        if acodec and acodec != "none":
+            return MediaType.AUDIO
+
+    return MediaType.UNKNOWN
+
+
+def extract_media_items(info: dict) -> list[MediaItem]:
+    """yt-dlp veya benzeri raw metadata girdisinden MediaItem listesi oluşturur.
+    Bu aşamada sadece deneme ve uyumluluk (carousel/slideshow) altyapısı içindir.
+    """
+    items = []
+
+    entries = info.get("entries")
+    if entries and isinstance(entries, list):
+        for idx, entry in enumerate(entries):
+            if not isinstance(entry, dict):
+                continue
+
+            mtype = _determine_media_type(entry)
+
+            items.append(
+                MediaItem(
+                    media_type=mtype,
+                    id=entry.get("id"),
+                    url=entry.get("url") or entry.get("webpage_url"),
+                    thumbnail=entry.get("thumbnail"),
+                    width=entry.get("width"),
+                    height=entry.get("height"),
+                    duration=entry.get("duration"),
+                    index=idx,
+                    title=entry.get("title"),
+                )
+            )
+    else:
+        # Tekil öğe
+        mtype = _determine_media_type(info)
+
+        items.append(
+            MediaItem(
+                media_type=mtype,
+                id=info.get("id"),
+                url=info.get("url") or info.get("webpage_url"),
+                thumbnail=info.get("thumbnail"),
+                width=info.get("width"),
+                height=info.get("height"),
+                duration=info.get("duration"),
+                index=0,
+                title=info.get("title"),
+            )
+        )
+
+    return items
+
+
 def detect_platform_type(url: str) -> PlatformType:
     if not url or not isinstance(url, str):
         return PlatformType.UNKNOWN
@@ -571,6 +667,7 @@ class DownloadRequest:
     rate_limit_bps: int | None = None
     session_method: SessionMethod = SessionMethod.AUTO
     cookie_file_path: Path | None = None
+    media_items: list[MediaItem] = field(default_factory=list)
 
 
 @dataclass(slots=True)
@@ -591,6 +688,7 @@ class QueueItem:
     rate_limit_bps: int | None = None
     session_method: str = "auto"
     cookie_file_path: str | Path | None = None
+    media_items: list[MediaItem] = field(default_factory=list)
 
 
 @dataclass
@@ -630,6 +728,7 @@ class MediaMetadata:
     selected_fps: float | None = None
     session_method: str | SessionMethod = SessionMethod.AUTO
     cookie_file_path: str | Path | None = None
+    media_items: list[MediaItem] = field(default_factory=list)
 
 
 def format_bytes(size: float | None) -> str:

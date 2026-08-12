@@ -196,3 +196,50 @@ class TestPlaylistUniqueDirectory:
         # We test main_window logic implicitly here by mocking things or just checking target_final_path
         # But this is a unit test so we just verify the utility works.
         pass
+
+
+def test_parse_audio_quality():
+    from src.download_options import parse_audio_quality
+
+    assert parse_audio_quality("320 kbps (En iyi)") == "320"
+    assert parse_audio_quality("256 kbps") == "256"
+    assert parse_audio_quality("192 kbps") == "192"
+    assert parse_audio_quality("128 kbps") == "128"
+    assert parse_audio_quality("Bilinmeyen Kalite") == "192"
+    assert parse_audio_quality("999 kbps") == "192"
+    assert parse_audio_quality("64 kbps") == "192"
+    assert parse_audio_quality("320 abc") == "192"
+    assert parse_audio_quality("") == "192"
+    assert parse_audio_quality(None) == "192"
+
+
+def test_audio_options_preferred_quality(tmp_path):
+    # 320 kbps
+    req = create_request(output_dir=tmp_path, media_type="Ses (MP3)", quality="320 kbps (En iyi)")
+    opts = build_ydl_options(req)
+    assert opts["postprocessors"][0]["preferredquality"] == "320"
+
+    # 256 kbps
+    req = create_request(output_dir=tmp_path, media_type="Ses (MP3)", quality="256 kbps")
+    opts = build_ydl_options(req)
+    assert opts["postprocessors"][0]["preferredquality"] == "256"
+
+    # 192 kbps
+    req = create_request(output_dir=tmp_path, media_type="Ses (MP3)", quality="192 kbps")
+    opts = build_ydl_options(req)
+    assert opts["postprocessors"][0]["preferredquality"] == "192"
+
+    # 128 kbps
+    req = create_request(output_dir=tmp_path, media_type="Ses (MP3)", quality="128 kbps")
+    opts = build_ydl_options(req)
+    assert opts["postprocessors"][0]["preferredquality"] == "128"
+
+    # fallback (unknown/empty)
+    req = create_request(output_dir=tmp_path, media_type="Ses (MP3)", quality="Eski Kalite Biçimi")
+    opts = build_ydl_options(req)
+    assert opts["postprocessors"][0]["preferredquality"] == "192"
+
+    # edge case: 999 kbps
+    req = create_request(output_dir=tmp_path, media_type="Ses (MP3)", quality="999 kbps")
+    opts = build_ydl_options(req)
+    assert opts["postprocessors"][0]["preferredquality"] == "192"

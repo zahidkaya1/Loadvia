@@ -23,12 +23,14 @@ from src.browser_sessions import (
     is_browser_cookie_lock_error,
     is_chromium_encryption_error,
 )
-from src.download_options import build_ydl_options
-from src.history import DownloadRecord, save_record
+from src.download_options import build_ydl_options, parse_audio_quality
+from src.history import DownloadRecord, reserve_unique_media_path, save_record
 from src.models import (
     DownloadRequest,
+    MediaType,
     PlatformType,
     detect_platform_type,
+    extract_media_items,
     translate_social_error,
 )
 from src.utils import (
@@ -239,7 +241,12 @@ class DownloadWorker(QObject):
                 if isinstance(data.get("info_dict"), dict)
                 else ""
             )
-            if "MP3" in self.request.media_type or "Ses" in self.request.media_type:
+            if (
+                "MP3" in self.request.media_type
+                or "Fotoğraf" in self.request.media_type
+                or "image" in self.request.media_type.lower()
+                or "Ses" in self.request.media_type
+            ):
                 phase = "audio_downloading"
             elif vcodec != "none" and acodec == "none":
                 phase = "video_downloading"
@@ -428,6 +435,7 @@ class DownloadWorker(QObject):
         from src.utils import is_valid_kick_manifest_url, validate_final_download
 
         is_audio = "MP3" in self.request.media_type or "Ses" in self.request.media_type
+        audio_bitrate_k = f"{parse_audio_quality(self.request.quality)}k"
 
         target_final_path = self.request.target_final_path
         if not target_final_path or target_final_path.stem.lower() in {
@@ -649,7 +657,7 @@ class DownloadWorker(QObject):
                 "-c:a",
                 "libmp3lame",
                 "-b:a",
-                "192k",
+                audio_bitrate_k,
                 str(target_final_path),
             ]
         else:
@@ -766,7 +774,7 @@ class DownloadWorker(QObject):
                 "-c:a",
                 "aac",
                 "-b:a",
-                "192k",
+                audio_bitrate_k,
                 str(target_final_path),
             ]
             ret_fallback = _run_ffmpeg_cmd(cmd_fallback)
@@ -845,10 +853,17 @@ class DownloadWorker(QObject):
             from src.session_manager import SessionManager
             from src.threads_share_resolver import resolve_threads_share_url
 
-            if "threads" in self.request.url.lower() and "/share/" in self.request.url.lower():
-                resolved = resolve_threads_share_url(self.request.url, session_mgr=SessionManager())
+            if (
+                "threads" in self.request.url.lower()
+                and "/share/" in self.request.url.lower()
+            ):
+                resolved = resolve_threads_share_url(
+                    self.request.url, session_mgr=SessionManager()
+                )
                 if resolved and resolved != self.request.url:
-                    self.log.emit("Threads canonical URL bulundu, indirme güncelleniyor.")
+                    self.log.emit(
+                        "Threads canonical URL bulundu, indirme güncelleniyor."
+                    )
                     self.request = dataclasses.replace(self.request, url=resolved)
 
             # --- Kick VOD: İndirme başlamadan güncel playback URL'sini al ---
@@ -983,12 +998,17 @@ class DownloadWorker(QObject):
                             self.cancelled.emit()
                             return
 
+                        if (
+                            self.request.media_type
+                            and "image" in self.request.media_type.lower()
+                        ):
+                            self._download_image_directly(info, platform)
+                            return
+
                         is_playlist = self.request.playlist or (
                             isinstance(info, dict) and info.get("_type") == "playlist"
                         )
                         if not is_playlist and isinstance(info, dict):
-                            from src.history import reserve_unique_media_path
-
                             expected_filename = downloader.prepare_filename(info)
                             if expected_filename:
                                 expected_path = Path(expected_filename)
@@ -1184,12 +1204,24 @@ class DownloadWorker(QObject):
                             self.cancelled.emit()
                             return
 
+                        if (
+                            self.request.media_type
+                            and self.request.media_type == "Tüm Medyalar"
+                        ):
+                            self._download_carousel(info, platform, options)
+                            return
+
+                        if self.request.media_type and (
+                            "Fotoğraf" in self.request.media_type
+                            or "image" in self.request.media_type.lower()
+                        ):
+                            self._download_image_directly(info, platform)
+                            return
+
                         is_playlist = self.request.playlist or (
                             isinstance(info, dict) and info.get("_type") == "playlist"
                         )
                         if not is_playlist and isinstance(info, dict):
-                            from src.history import reserve_unique_media_path
-
                             expected_filename = downloader.prepare_filename(info)
                             if expected_filename:
                                 expected_path = Path(expected_filename)
@@ -1675,6 +1707,285 @@ class DownloadWorker(QObject):
                     all_clean = False
 
         return all_clean
+
+    def _download_carousel(
+        self, info: dict[str, Any], platform: PlatformType, options: dict[str, Any]
+    ) -> None:
+
+        from src.history import reserve_unique_media_path, sanitize_filename
+
+        items = self.request.media_items if self.request.media_items else extract_media_items(info)
+        if not items:
+            self.failed.emit("Carousel gönderisinde indirilebilir medya bulunamadı.")
+            return
+
+        total = len(items)
+        success_count = 0
+        failure_count = 0
+
+        base_title = (
+            info.get("title")
+            or info.get("description")
+            or info.get("id")
+            or "Instagram_Post"
+        )
+        base_title_sanitized = sanitize_filename(base_title)
+        out_dir = self.request.output_dir
+
+        for ui_idx, item in enumerate(items, start=1):
+            if self._cancel_requested:
+                self.cancelled.emit()
+                return
+
+            self.status.emit(f"({ui_idx}/{total}) İndiriliyor...")
+            self.progress.emit(0)
+
+            actual_idx = item.index + 1
+            padded_idx = f"{actual_idx:02d}"
+            item_base_name = f"{base_title_sanitized}_{padded_idx}"
+
+            entries = info.get("entries", [])
+            raw_entry = entries[item.index] if entries and 0 <= item.index < len(entries) else info
+
+            if item.media_type == MediaType.IMAGE:
+                try:
+                    ext = "jpg"
+                    target_path = reserve_unique_media_path(
+                        out_dir, item_base_name, ext
+                    )
+                    res_path = self._execute_image_download(
+                        item,
+                        info,
+                        platform,
+                        target_path_override=target_path,
+                        emit_success=False,
+                    )
+                    if res_path:
+                        success_count += 1
+                    else:
+                        failure_count += 1
+                except Exception as e:  # noqa: BLE001
+                    self.log.emit(f"({ui_idx}/{total}) Fotoğraf indirilemedi: {e}")
+                    failure_count += 1
+            else:
+                try:
+                    ext = raw_entry.get("ext", "mp4")
+                    target_path = reserve_unique_media_path(
+                        out_dir, item_base_name, f".{ext}"
+                    )
+
+                    entry_options = options.copy()
+                    entry_options["outtmpl"] = {
+                        "default": str(target_path.with_suffix(".%(ext)s"))
+                    }
+                    entry_options["overwrites"] = True
+                    entry_options["continuedl"] = False
+
+                    with create_ytdl(entry_options) as entry_downloader:
+                        with patch_subprocess_for_hidden_console():
+                            res = entry_downloader.process_ie_result(
+                                raw_entry, download=True
+                            )
+                        self._handle_post_download_transcode(res)
+                        self._save_completed_record(platform, res)
+
+                    success_count += 1
+                except Exception as e:  # noqa: BLE001
+                    self.log.emit(f"({ui_idx}/{total}) Video indirilemedi: {e}")
+                    failure_count += 1
+
+        if success_count == 0:
+            self.failed.emit("Tüm medya öğelerinin indirilmesi başarısız oldu.")
+        elif failure_count > 0:
+            msg = f"Carousel indirildi. ({total} medyadan {success_count} başarılı, {failure_count} başarısız)"
+            self.succeeded.emit(msg)
+        else:
+            self.succeeded.emit(f"Carousel başarıyla indirildi ({total} medya).")
+
+    def _download_image_directly(
+        self, info: dict[str, Any], platform: PlatformType
+    ) -> None:
+
+        items = extract_media_items(info)
+        image_items = [i for i in items if i.media_type == MediaType.IMAGE]
+
+        if not image_items:
+            self.failed.emit("Bu gönderide indirilebilir fotoğraf bulunamadı.")
+            return
+
+        item = image_items[0]
+        if not item.url:
+            self.failed.emit("Fotoğraf için geçerli bir medya bağlantısı bulunamadı.")
+            return
+
+        self.status.emit("Fotoğraf indiriliyor...")
+        try:
+            self._execute_image_download(item, info, platform, emit_success=True)
+        except Exception as e:  # noqa: BLE001
+            self.failed.emit(str(e))
+            self.log.emit(f"Fotoğraf indirilirken hata oluştu: {e}")
+
+    def _execute_image_download(
+        self,
+        item: Any,
+        info: dict[str, Any],
+        platform: PlatformType,
+        target_path_override: Path | None = None,
+        emit_success: bool = True,
+    ) -> Path | None:
+        import datetime
+        import uuid
+
+        from src.history import DownloadRecord, reserve_unique_media_path, save_record
+
+        image_url = item.url
+        if not image_url:
+            raise ValueError("Medya bağlantısı eksik.")
+
+        try:
+            from curl_cffi import requests as cffi_requests
+        except ImportError:
+            raise RuntimeError("curl_cffi kütüphanesi eksik.")
+
+        headers = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        }
+
+        if "instagram.com" in self.request.url:
+            headers["Referer"] = "https://www.instagram.com/"
+        elif "tiktok.com" in self.request.url:
+            headers["Referer"] = "https://www.tiktok.com/"
+
+        cookies_dict = {}
+        if self.request.cookie_file_path or self.request.session_method not in (
+            None,
+            "none",
+            "auto",
+        ):
+            from src.session_manager import SessionManager
+
+            session_mgr = SessionManager()
+            data = session_mgr.store.load_session()
+            if data:
+                for line in data.strip().split("\n"):
+                    if not line or line.startswith("#"):
+                        continue
+                    parts = line.split("\t")
+                    if len(parts) >= 7:
+                        cookies_dict[parts[5]] = parts[6]
+
+        self.log.emit(f"HTTP üzerinden fotoğraf indiriliyor: {image_url}")
+
+        r = cffi_requests.get(
+            image_url,
+            headers=headers,
+            cookies=cookies_dict,
+            impersonate="chrome120",
+            stream=True,
+            timeout=15,
+        )
+
+        if r.status_code == 404:
+            raise RuntimeError("Fotoğraf silinmiş veya erişilemiyor (404).")
+        elif r.status_code == 403:
+            raise RuntimeError(
+                "Fotoğrafa erişim reddedildi (403). Oturum süresi dolmuş olabilir."
+            )
+        elif r.status_code != 200:
+            raise RuntimeError(
+                f"Sunucu hatası ({r.status_code}). Daha sonra tekrar deneyin."
+            )
+
+        ext = "jpg"
+        content_type = r.headers.get("Content-Type", "").lower()
+        if "png" in content_type:
+            ext = "png"
+        elif "webp" in content_type:
+            ext = "webp"
+        elif "jpeg" in content_type or "jpg" in content_type:
+            ext = "jpg"
+        else:
+            if ".png" in image_url.lower():
+                ext = "png"
+            elif ".webp" in image_url.lower():
+                ext = "webp"
+
+        if target_path_override:
+            if (
+                target_path_override.suffix == ""
+                or target_path_override.suffix != f".{ext}"
+            ):
+                target_path = target_path_override.with_suffix(f".{ext}")
+            else:
+                target_path = target_path_override
+            self._current_reserved_paths.append(target_path)
+            self._last_filename = target_path.name
+        else:
+            target_path_info = self.request.target_final_path
+            if not target_path_info:
+                title = item.title or info.get("title") or "Fotoğraf"
+                media_id = item.id or info.get("id") or str(uuid.uuid4())[:8]
+                base_name = f"{title} [{media_id}]"
+                target_path = reserve_unique_media_path(
+                    self.request.output_dir, base_name, ext
+                )
+                self._last_filename = target_path.name
+                self._current_reserved_paths.append(target_path)
+            else:
+                target_path = target_path_info
+
+        temp_path = target_path.with_suffix(".temp")
+        self._created_files.add(temp_path)
+
+        total_size = int(r.headers.get("Content-Length", 0))
+        downloaded = 0
+
+        with open(temp_path, "wb") as f:
+            for chunk in r.iter_content(chunk_size=8192):
+                if self._cancel_requested:
+                    self.cancelled.emit()
+                    return None
+                if chunk:
+                    f.write(chunk)
+                    downloaded += len(chunk)
+                    if total_size > 0:
+                        pct = (downloaded / total_size) * 100
+                        self.progress.emit(int(pct))
+                        self.progress_details.emit(
+                            {
+                                "speed": _human_speed(0),
+                                "downloaded_bytes": f"{_human_speed(downloaded)} / {_human_speed(total_size)}",
+                                "total_bytes": "",
+                            }
+                        )
+
+        if temp_path.exists():
+            temp_path.rename(target_path)
+
+        rec = DownloadRecord(
+            platform=platform.value if platform != PlatformType.UNKNOWN else "unknown",
+            media_id=item.id or info.get("id") or "",
+            media_type=self.request.media_type,
+            requested_quality=self.request.quality,
+            selected_height=item.height or info.get("height"),
+            final_path=str(target_path.resolve()),
+            state="completed",
+            file_size=target_path.stat().st_size if target_path.exists() else 0,
+            completed_at=datetime.datetime.now(datetime.timezone.utc).isoformat(),
+            video_codec="",
+            audio_codec="",
+            playlist=self.request.playlist,
+            title=item.title or info.get("title") or target_path.stem,
+            source_url=self.request.url,
+        )
+        save_record(rec)
+
+        if emit_success:
+            self.progress.emit(100)
+            self.status.emit("İndirme tamamlandı")
+            self.succeeded.emit(str(target_path.resolve()))
+
+        return target_path
 
     def _safe_unlink(
         self, path_obj: Path, retries: int = 15, delay: float = 0.1

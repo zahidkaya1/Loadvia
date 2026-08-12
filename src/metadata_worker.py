@@ -881,16 +881,36 @@ class MetadataWorker(QObject):
 
     def _build_metadata(self, info: dict[str, Any]) -> MediaMetadata:
         platform_type = detect_platform_type(self.url)
-        info_type = str(info.get("_type") or "").strip().lower()
         raw_entries = info.get("entries")
         entries = list(raw_entries) if raw_entries else []
         valid_entries = [e for e in entries if isinstance(e, dict)]
+
+        info_type = str(info.get("_type") or "").strip().lower()
+        extractor = str(info.get("extractor_key") or info.get("extractor") or "").lower()
+
         is_playlist = info_type in ("playlist", "multi_video") or bool(entries)
+        # Carousel / Çoklu medya postlarını playlist olmaktan çıkaralım
+        if "instagram" in extractor or platform_type in (
+            PlatformType.INSTAGRAM_POST,
+            PlatformType.INSTAGRAM_REEL,
+        ):
+            url = str(info.get("webpage_url") or info.get("original_url") or "").lower()
+            if "/p/" in url or "/reel/" in url:
+                is_playlist = False
+
+        if (platform_type == PlatformType.TIKTOK_SLIDESHOW or "tiktok" in extractor) and info_type == "playlist":
+            url = str(info.get("webpage_url") or info.get("original_url") or "").lower()
+            if "/photo/" in url or "/video/" in url:
+                is_playlist = False
+
         playlist_count = (
             len(valid_entries)
             if is_playlist and valid_entries
             else (len(entries) if is_playlist else None)
         )
+
+        from src.models import MediaType, extract_media_items
+        media_items = extract_media_items(info)
 
         webpage_url = str(
             info.get("webpage_url") or info.get("original_url") or self.url
@@ -1078,10 +1098,12 @@ class MetadataWorker(QObject):
                 PlatformType.INSTAGRAM_POST,
                 PlatformType.INSTAGRAM_REEL,
             ):
-                raise ValueError(
-                    "Bu gönderide indirilebilir video bulunamadı. Fotoğraf indirme desteği henüz eklenmedi."
-                )
-            if platform_type == PlatformType.TWITTER_POST:
+                has_media = any(mi.media_type in (MediaType.IMAGE, MediaType.VIDEO, MediaType.GIF) for mi in media_items)
+                if not has_media:
+                    raise ValueError(
+                        "Bu gönderide indirilebilir içerik bulunamadı."
+                    )
+            elif platform_type == PlatformType.TWITTER_POST:
                 raise ValueError("Bu X gönderisinde indirilebilir video bulunamadı.")
 
         active_info = target_entry if target_entry else info
@@ -1170,4 +1192,5 @@ class MetadataWorker(QObject):
             available_formats=valid_formats,
             session_method=self.session_method,
             cookie_file_path=self.cookie_file_path,
+            media_items=media_items,
         )

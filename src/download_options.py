@@ -9,6 +9,23 @@ from src.models import (
     detect_platform_type,
 )
 
+VIDEO_QUALITIES = [
+    "En iyi kullanılabilir kalite",
+    "2160p'ye kadar",
+    "1440p'ye kadar",
+    "1080p'ye kadar",
+    "720p'ye kadar",
+    "480p'ye kadar",
+    "360p'ye kadar",
+]
+
+AUDIO_QUALITIES = [
+    "320 kbps (En iyi)",
+    "256 kbps",
+    "192 kbps",
+    "128 kbps",
+]
+
 QUALITY_HEIGHTS: dict[str, int | None] = {
     "En iyi kullanılabilir kalite": None,
     "En iyi kalite": None,
@@ -40,6 +57,22 @@ def parse_quality_height(quality: str) -> int | None:
     if match:
         return int(match.group(1))
     return None
+
+
+def parse_audio_quality(quality: str) -> str:
+    """MP3 kalite metnini yt-dlp ve ffmpeg için kbps (str) değerine dönüştürür.
+    Desteklenen değerler: 320, 256, 192, 128. Varsayılan: 192.
+    """
+    if not quality:
+        return "192"
+
+    match = re.search(r"(\d{3})\s*kbps", str(quality).lower())
+    if match:
+        bitrate = match.group(1)
+        if bitrate in ("320", "256", "192", "128"):
+            return bitrate
+
+    return "192"
 
 
 def _video_format(quality: str) -> str:
@@ -165,6 +198,7 @@ def build_ydl_options(request: DownloadRequest) -> dict[str, Any]:
         options["playlist_items"] = "1"
 
     if request.media_type == "Ses (MP3)":
+        audio_quality = parse_audio_quality(request.quality)
         options.update(
             {
                 "format": "bestaudio/best",
@@ -172,7 +206,7 @@ def build_ydl_options(request: DownloadRequest) -> dict[str, Any]:
                     {
                         "key": "FFmpegExtractAudio",
                         "preferredcodec": "mp3",
-                        "preferredquality": "192",
+                        "preferredquality": audio_quality,
                     }
                 ],
             }

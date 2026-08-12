@@ -26,6 +26,7 @@ from PySide6.QtWidgets import (
 
 from src.config import APP_NAME
 from src.dialogs import AppMessageDialog
+from src.download_options import AUDIO_QUALITIES, VIDEO_QUALITIES
 from src.models import QueueItem
 from src.utils import (
     apply_pointing_hand_cursor,
@@ -80,7 +81,9 @@ class QueueItemEditDialog(QDialog):
 
         media_label = QLabel("Dosya Türü:")
         self.media_combo = QComboBox()
-        self.media_combo.addItems(["Video (MP4)", "Ses (MP3)"])
+        self.media_combo.addItems(["Video (MP4)", "Ses (MP3)", "Fotoğraf (JPG/PNG)"])
+        if self.media_combo.findText(item.media_type) == -1:
+            self.media_combo.addItem(item.media_type)
         idx = self.media_combo.findText(item.media_type)
         if idx >= 0:
             self.media_combo.setCurrentIndex(idx)
@@ -262,24 +265,9 @@ class QueueItemEditDialog(QDialog):
         current = self.quality_combo.currentText()
         self.quality_combo.clear()
         if "Ses" in media_text or "MP3" in media_text:
-            self.quality_combo.addItems(
-                [
-                    "320 kbps (En iyi)",
-                    "256 kbps",
-                    "192 kbps",
-                    "128 kbps",
-                ]
-            )
+            self.quality_combo.addItems(AUDIO_QUALITIES)
         else:
-            self.quality_combo.addItems(
-                [
-                    "En iyi kullanılabilir kalite",
-                    "1080p'ye kadar",
-                    "720p'ye kadar",
-                    "480p'ye kadar",
-                    "360p'ye kadar",
-                ]
-            )
+            self.quality_combo.addItems(VIDEO_QUALITIES)
         idx = self.quality_combo.findText(current)
         if idx >= 0:
             self.quality_combo.setCurrentIndex(idx)
@@ -361,7 +349,7 @@ class DownloadQueueDialog(QDialog):
 
         media_label = QLabel("Tür:")
         self.media_combo = QComboBox()
-        self.media_combo.addItems(["Video (MP4)", "Ses (MP3)"])
+        self.media_combo.addItems(["Video (MP4)", "Ses (MP3)", "Fotoğraf (JPG/PNG)"])
         self.media_combo.currentTextChanged.connect(self._on_media_type_changed)
 
         quality_label = QLabel("Kalite:")
@@ -617,24 +605,9 @@ class DownloadQueueDialog(QDialog):
         current = self.quality_combo.currentText()
         self.quality_combo.clear()
         if "Ses" in media_text or "MP3" in media_text:
-            self.quality_combo.addItems(
-                [
-                    "320 kbps (En iyi)",
-                    "256 kbps",
-                    "192 kbps",
-                    "128 kbps",
-                ]
-            )
+            self.quality_combo.addItems(AUDIO_QUALITIES)
         else:
-            self.quality_combo.addItems(
-                [
-                    "En iyi kullanılabilir kalite",
-                    "1080p'ye kadar",
-                    "720p'ye kadar",
-                    "480p'ye kadar",
-                    "360p'ye kadar",
-                ]
-            )
+            self.quality_combo.addItems(VIDEO_QUALITIES)
         idx = self.quality_combo.findText(current)
         if idx >= 0:
             self.quality_combo.setCurrentIndex(idx)

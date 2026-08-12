@@ -61,6 +61,7 @@ from src.dialogs import (
     SessionRetryDialog,
     UpdateAvailableDialog,
 )
+from src.download_options import VIDEO_QUALITIES
 from src.download_worker import DownloadWorker
 from src.history import (
     HistoryValidationWorker,
@@ -358,20 +359,13 @@ class MainWindow(QMainWindow):
 
         self.media_combo = NoWheelComboBox()
         self.media_combo.setObjectName("mediaTypeCombo")
-        self.media_combo.addItems(["Video (MP4)", "Ses (MP3)"])
+        self.media_combo.addItems(["Video (MP4)", "Ses (MP3)", "Fotoğraf (JPG/PNG)"])
         self.media_combo.currentTextChanged.connect(self._on_media_type_changed)
         configure_combo_box(self.media_combo)
 
         self.quality_combo = NoWheelComboBox()
         self.quality_combo.setObjectName("qualityCombo")
-        self.quality_combo.addItems(
-            [
-                "En iyi kullanılabilir kalite",
-                "1080p'ye kadar",
-                "720p'ye kadar",
-                "480p'ye kadar",
-            ]
-        )
+        self.quality_combo.addItems(VIDEO_QUALITIES)
         self.quality_combo.currentTextChanged.connect(self._on_quality_changed)
         configure_combo_box(self.quality_combo)
 
@@ -740,6 +734,19 @@ class MainWindow(QMainWindow):
 
     def _on_metadata_ready(self, meta: MediaMetadata) -> None:
         self._current_metadata = meta
+        from src.models import MediaType
+
+        has_video = any(mi.media_type == MediaType.VIDEO for mi in meta.media_items)
+        has_image = any(mi.media_type == MediaType.IMAGE for mi in meta.media_items)
+        is_carousel = len(meta.media_items) > 1
+
+        if is_carousel:
+            if self.media_combo.findText("Tüm Medyalar") == -1:
+                self.media_combo.addItem("Tüm Medyalar")
+            self.media_combo.setCurrentText("Tüm Medyalar")
+        elif has_image and not has_video:
+            self.media_combo.setCurrentText("Fotoğraf (JPG/PNG)")
+
         self._preferred_browser = meta.session_browser
         self._preferred_profile = meta.session_profile
         self._preferred_impersonation = meta.preferred_impersonation
@@ -798,14 +805,7 @@ class MainWindow(QMainWindow):
             for h in meta.available_heights:
                 self.quality_combo.addItem(f"{h}p'ye kadar")
         else:
-            self.quality_combo.addItems(
-                [
-                    "1080p'ye kadar",
-                    "720p'ye kadar",
-                    "480p'ye kadar",
-                    "360p'ye kadar",
-                ]
-            )
+            self.quality_combo.addItems(VIDEO_QUALITIES[1:])
 
         find_idx = self.quality_combo.findText(current_sel)
         if find_idx < 0 and current_sel:
@@ -1218,12 +1218,16 @@ class MainWindow(QMainWindow):
     def _on_media_type_changed(self, text: str = "") -> None:
         media_text = text if text else self.media_combo.currentText()
         is_audio = "MP3" in media_text or "Ses" in media_text
-        self.quality_combo.setEnabled(not is_audio)
+        is_photo = "Fotoğraf" in media_text
+        self.quality_combo.setEnabled(not (is_audio or is_photo))
         if is_audio:
             self.quality_label.setText("Ses kalitesi:")
             self.quality_combo.setToolTip(
-                "MP3 formatı için 192 kbps sabit ses kalitesi kullanılır."
+                "MP3 formatı için sabit ses kalitesi kullanılır."
             )
+        elif is_photo:
+            self.quality_label.setText("Fotoğraf kalitesi:")
+            self.quality_combo.setToolTip("Fotoğraf için orijinal kalite kullanılır.")
         else:
             self.quality_label.setText("Video kalitesi:")
             self.quality_combo.setToolTip("Video çözünürlük üst sınırını seçin.")
@@ -1395,7 +1399,34 @@ class MainWindow(QMainWindow):
         quality = self.quality_combo.currentText()
         playlist = self.playlist_checkbox.isChecked()
 
-        ext = "mp3" if ("MP3" in media_type or "Ses" in media_type) else "mp4"
+        selected_media_items = []
+        is_carousel = (
+            self._current_metadata
+            and len(self._current_metadata.media_items) > 1
+            and platform_now in (PlatformType.INSTAGRAM_POST, PlatformType.INSTAGRAM_REEL)
+        )
+        if is_carousel:
+            from src.media_selector_dialog import MediaSelectorDialog
+            dialog = MediaSelectorDialog(self._current_metadata.media_items, self)
+            if dialog.exec() == QDialog.DialogCode.Accepted:
+                selected_media_items = list(dialog.get_selected_items())
+            else:
+                return
+
+        if "MP3" in media_type or "Ses" in media_type:
+            ext = "mp3"
+        elif "Fotoğraf" in media_type:
+            ext = (
+                self._current_metadata.selected_extension
+                if (
+                    self._current_metadata
+                    and self._current_metadata.selected_extension
+                    and self._current_metadata.selected_extension != "mp4"
+                )
+                else "jpg"
+            )
+        else:
+            ext = "mp4"
         raw_title = (
             self._current_metadata.title
             if (self._current_metadata and self._current_metadata.title)
@@ -1484,6 +1515,7 @@ class MainWindow(QMainWindow):
             rate_limit_bps=current_rate_limit,
             session_method=getattr(self, "_active_session_method", SessionMethod.AUTO),
             cookie_file_path=getattr(self, "_active_cookie_file_path", None),
+            media_items=selected_media_items,
         )
 
         self._set_ui_downloading(True)
@@ -2174,6 +2206,7 @@ class MainWindow(QMainWindow):
         playlist: bool | None = None,
         output_dir: Path | None = None,
         rate_limit_bps: int | None | object = ...,
+        media_items: list | None = None,
     ) -> None:
         added_count = 0
         media_type = media_type or self.media_combo.currentText()
@@ -2222,6 +2255,7 @@ class MainWindow(QMainWindow):
                 output_dir=output_dir,
                 browser=browser,
                 rate_limit_bps=rate_limit_bps,
+                media_items=media_items if media_items else [],
             )
             self._queue_items.append(q_item)
             added_count += 1
@@ -2267,6 +2301,17 @@ class MainWindow(QMainWindow):
 
         valid = extract_supported_urls_from_text(url)
         if valid:
+            selected_media_items = []
+            if len(valid) == 1 and self._current_metadata:
+                platform_now = detect_platform_type(valid[0])
+                if platform_now in (PlatformType.INSTAGRAM_POST, PlatformType.INSTAGRAM_REEL) and len(self._current_metadata.media_items) > 1:
+                    from src.media_selector_dialog import MediaSelectorDialog
+                    dialog = MediaSelectorDialog(self._current_metadata.media_items, self)
+                    if dialog.exec() == QDialog.DialogCode.Accepted:
+                        selected_media_items = list(dialog.get_selected_items())
+                    else:
+                        return
+
             self._on_queue_urls_added(
                 valid,
                 media_type=media_type,
@@ -2276,6 +2321,7 @@ class MainWindow(QMainWindow):
                 rate_limit_bps=self.get_current_rate_limit_bps()
                 if rate_limit_bps is ...
                 else rate_limit_bps,
+                media_items=selected_media_items,
             )
         else:
             AppMessageDialog(
@@ -2472,6 +2518,7 @@ class MainWindow(QMainWindow):
                 rate_limit_bps=item.rate_limit_bps,
                 session_method=item.session_method,
                 cookie_file_path=item.cookie_file_path,
+                media_items=item.media_items if hasattr(item, 'media_items') else [],
             )
 
             self._download_succeeded_result = None
