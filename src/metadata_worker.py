@@ -766,6 +766,10 @@ class MetadataWorker(QObject):
                 "no_warnings": False,
             }
 
+            p_type = detect_platform_type(self.url)
+            if p_type in (PlatformType.INSTAGRAM_POST, PlatformType.INSTAGRAM_REEL):
+                opts["ignore_no_formats_error"] = True
+
             temp_cookie_ctx = None
 
             if static_cookie_path:

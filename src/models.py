@@ -107,6 +107,13 @@ def extract_media_items(info: dict) -> list[MediaItem]:
         # Tekil öğe
         mtype = _determine_media_type(info)
 
+        if mtype == MediaType.UNKNOWN:
+            extractor = str(info.get("extractor_key") or info.get("extractor") or "").lower()
+            if "instagram" in extractor:
+                formats = info.get("formats") or info.get("requested_formats") or []
+                if not formats and (info.get("thumbnail") or info.get("thumbnails")):
+                    mtype = MediaType.IMAGE
+
         items.append(
             MediaItem(
                 media_type=mtype,
@@ -599,7 +606,7 @@ def translate_social_error(exc_or_msg: Exception | str, url: str) -> str:
                 "no media",
             )
         ):
-            return "Bu gönderide indirilebilir video bulunamadı. Fotoğraf indirme desteği henüz eklenmedi."
+            return "Bu gönderide indirilebilir medya bulunamadı."
         if any(
             term in msg_lower
             for term in ("login", "cookie", "log in", "redirect", "private", "require")
@@ -617,7 +624,7 @@ def translate_social_error(exc_or_msg: Exception | str, url: str) -> str:
         )
     ):
         if "instagram" in url.lower():
-            return "Bu gönderide indirilebilir video bulunamadı. Fotoğraf indirme desteği henüz eklenmedi."
+            return "Bu gönderide indirilebilir medya bulunamadı."
         if "twitter" in url.lower() or "x.com" in url.lower():
             return "Bu X gönderisinde indirilebilir video bulunamadı."
 
