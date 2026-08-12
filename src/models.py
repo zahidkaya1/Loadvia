@@ -100,7 +100,7 @@ def extract_media_items(info: dict) -> list[MediaItem]:
                     height=entry.get("height"),
                     duration=entry.get("duration"),
                     index=idx,
-                    title=entry.get("title")
+                    title=entry.get("title"),
                 )
             )
     else:
@@ -117,7 +117,7 @@ def extract_media_items(info: dict) -> list[MediaItem]:
                 height=info.get("height"),
                 duration=info.get("duration"),
                 index=0,
-                title=info.get("title")
+                title=info.get("title"),
             )
         )
 

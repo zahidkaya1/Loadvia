@@ -82,6 +82,8 @@ class QueueItemEditDialog(QDialog):
         media_label = QLabel("Dosya Türü:")
         self.media_combo = QComboBox()
         self.media_combo.addItems(["Video (MP4)", "Ses (MP3)", "Fotoğraf (JPG/PNG)"])
+        if self.media_combo.findText(item.media_type) == -1:
+            self.media_combo.addItem(item.media_type)
         idx = self.media_combo.findText(item.media_type)
         if idx >= 0:
             self.media_combo.setCurrentIndex(idx)

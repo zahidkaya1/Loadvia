@@ -735,9 +735,16 @@ class MainWindow(QMainWindow):
     def _on_metadata_ready(self, meta: MediaMetadata) -> None:
         self._current_metadata = meta
         from src.models import MediaType
+
         has_video = any(mi.media_type == MediaType.VIDEO for mi in meta.media_items)
         has_image = any(mi.media_type == MediaType.IMAGE for mi in meta.media_items)
-        if has_image and not has_video:
+        is_carousel = len(meta.media_items) > 1
+
+        if is_carousel:
+            if self.media_combo.findText("Tüm Medyalar") == -1:
+                self.media_combo.addItem("Tüm Medyalar")
+            self.media_combo.setCurrentText("Tüm Medyalar")
+        elif has_image and not has_video:
             self.media_combo.setCurrentText("Fotoğraf (JPG/PNG)")
 
         self._preferred_browser = meta.session_browser
@@ -1220,9 +1227,7 @@ class MainWindow(QMainWindow):
             )
         elif is_photo:
             self.quality_label.setText("Fotoğraf kalitesi:")
-            self.quality_combo.setToolTip(
-                "Fotoğraf için orijinal kalite kullanılır."
-            )
+            self.quality_combo.setToolTip("Fotoğraf için orijinal kalite kullanılır.")
         else:
             self.quality_label.setText("Video kalitesi:")
             self.quality_combo.setToolTip("Video çözünürlük üst sınırını seçin.")
@@ -1397,7 +1402,15 @@ class MainWindow(QMainWindow):
         if "MP3" in media_type or "Ses" in media_type:
             ext = "mp3"
         elif "Fotoğraf" in media_type:
-            ext = self._current_metadata.selected_extension if (self._current_metadata and self._current_metadata.selected_extension and self._current_metadata.selected_extension != "mp4") else "jpg"
+            ext = (
+                self._current_metadata.selected_extension
+                if (
+                    self._current_metadata
+                    and self._current_metadata.selected_extension
+                    and self._current_metadata.selected_extension != "mp4"
+                )
+                else "jpg"
+            )
         else:
             ext = "mp4"
         raw_title = (
