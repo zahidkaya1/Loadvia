@@ -1757,6 +1757,8 @@ class DownloadWorker(QObject):
             or info.get("id")
             or "Instagram_Post"
         )
+        if platform in (PlatformType.INSTAGRAM_POST, PlatformType.INSTAGRAM_REEL, PlatformType.INSTAGRAM_STORY):
+            base_title = base_title.removeprefix("Video by ")
         base_title_sanitized = sanitize_filename(base_title)
         out_dir = self.request.output_dir
 
@@ -1952,6 +1954,8 @@ class DownloadWorker(QObject):
             target_path_info = self.request.target_final_path
             if not target_path_info:
                 title = item.title or info.get("title") or "Fotoğraf"
+                if platform in (PlatformType.INSTAGRAM_POST, PlatformType.INSTAGRAM_REEL, PlatformType.INSTAGRAM_STORY):
+                    title = title.removeprefix("Video by ")
                 media_id = item.id or info.get("id") or str(uuid.uuid4())[:8]
                 base_name = f"{title} [{media_id}]"
                 target_path = reserve_unique_media_path(
@@ -1982,8 +1986,8 @@ class DownloadWorker(QObject):
                         self.progress_details.emit(
                             {
                                 "speed": _human_speed(0),
-                                "downloaded_bytes": f"{_human_speed(downloaded)} / {_human_speed(total_size)}",
-                                "total_bytes": "",
+                                "downloaded_bytes": downloaded,
+                                "total_bytes": total_size,
                             }
                         )
 
