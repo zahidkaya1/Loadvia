@@ -122,3 +122,26 @@ def test_reservation_release(tmp_path):
     res2 = reserve_unique_media_path(tmp_path, "Rel", ".mp3")
     # Dosya sisteminde yok ve rezervasyon bırakıldı, yani numarasız alınmalı
     assert res2.name == "Rel.mp3"
+
+
+def test_image_collision_existing_file(tmp_path):
+    # A) Klasörde: bpthaber_01.jpg zaten varsa reserve_unique_media_path image için farklı hedef döndürmeli.
+    (tmp_path / "bpthaber_01.jpg").touch()
+    res = reserve_unique_media_path(tmp_path, "bpthaber_01", ".jpg")
+    assert res.name == "bpthaber_01 (1).jpg"
+
+
+def test_image_collision_existing_multiple_files(tmp_path):
+    # B) Klasörde: bpthaber_01.jpg ve collision sonucu oluşturulmuş önceki dosya da varsa
+    # bir sonraki benzersiz isim doğru oluşmalı.
+    (tmp_path / "bpthaber_01.jpg").touch()
+    (tmp_path / "bpthaber_01 (1).jpg").touch()
+    res = reserve_unique_media_path(tmp_path, "bpthaber_01", ".jpg")
+    assert res.name == "bpthaber_01 (2).jpg"
+
+
+def test_mixed_image_extensions(tmp_path):
+    # Farklı image uzantıları çakışma kabul edilmeli mi? Evet, supported_extensions hepsini kapsar.
+    (tmp_path / "Foto.png").touch()
+    res = reserve_unique_media_path(tmp_path, "Foto", ".jpg")
+    assert res.name == "Foto (1).jpg"

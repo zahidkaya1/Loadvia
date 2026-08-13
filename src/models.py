@@ -82,44 +82,59 @@ def extract_media_items(info: dict) -> list[MediaItem]:
     """
     items = []
 
+    def _process_item(entry: dict, idx: int) -> MediaItem | None:
+        if not isinstance(entry, dict):
+            return None
+
+        mtype = _determine_media_type(entry)
+
+        url = entry.get("url")
+        thumbnail = entry.get("thumbnail")
+
+        # Instagram fallback: If no formats but thumbnails exist, treat as IMAGE
+        if mtype == MediaType.UNKNOWN:
+            extractor = str(entry.get("extractor_key") or entry.get("extractor") or info.get("extractor_key") or info.get("extractor") or "").lower()
+            if "instagram" in extractor:
+                formats = entry.get("formats") or entry.get("requested_formats") or []
+                thumbnails = entry.get("thumbnails") or []
+                if not formats and (thumbnail or thumbnails):
+                    mtype = MediaType.IMAGE
+
+        # For IMAGE, yt-dlp might not set url. We extract it from best thumbnail.
+        if mtype == MediaType.IMAGE and not url:
+            thumbnails = entry.get("thumbnails") or []
+            if thumbnails:
+                best_thumb = thumbnails[-1]
+                url = best_thumb.get("url")
+            elif thumbnail:
+                url = thumbnail
+
+        if not url:
+            url = entry.get("webpage_url")
+
+        return MediaItem(
+            media_type=mtype,
+            id=entry.get("id"),
+            url=url,
+            thumbnail=thumbnail,
+            width=entry.get("width"),
+            height=entry.get("height"),
+            duration=entry.get("duration"),
+            index=idx,
+            title=entry.get("title"),
+        )
+
     entries = info.get("entries")
     if entries and isinstance(entries, list):
         for idx, entry in enumerate(entries):
-            if not isinstance(entry, dict):
-                continue
-
-            mtype = _determine_media_type(entry)
-
-            items.append(
-                MediaItem(
-                    media_type=mtype,
-                    id=entry.get("id"),
-                    url=entry.get("url") or entry.get("webpage_url"),
-                    thumbnail=entry.get("thumbnail"),
-                    width=entry.get("width"),
-                    height=entry.get("height"),
-                    duration=entry.get("duration"),
-                    index=idx,
-                    title=entry.get("title"),
-                )
-            )
+            item = _process_item(entry, idx)
+            if item:
+                items.append(item)
     else:
         # Tekil öğe
-        mtype = _determine_media_type(info)
-
-        items.append(
-            MediaItem(
-                media_type=mtype,
-                id=info.get("id"),
-                url=info.get("url") or info.get("webpage_url"),
-                thumbnail=info.get("thumbnail"),
-                width=info.get("width"),
-                height=info.get("height"),
-                duration=info.get("duration"),
-                index=0,
-                title=info.get("title"),
-            )
-        )
+        item = _process_item(info, 0)
+        if item:
+            items.append(item)
 
     return items
 
@@ -599,7 +614,7 @@ def translate_social_error(exc_or_msg: Exception | str, url: str) -> str:
                 "no media",
             )
         ):
-            return "Bu gönderide indirilebilir video bulunamadı. Fotoğraf indirme desteği henüz eklenmedi."
+            return "Bu gönderide indirilebilir medya bulunamadı."
         if any(
             term in msg_lower
             for term in ("login", "cookie", "log in", "redirect", "private", "require")
@@ -617,7 +632,7 @@ def translate_social_error(exc_or_msg: Exception | str, url: str) -> str:
         )
     ):
         if "instagram" in url.lower():
-            return "Bu gönderide indirilebilir video bulunamadı. Fotoğraf indirme desteği henüz eklenmedi."
+            return "Bu gönderide indirilebilir medya bulunamadı."
         if "twitter" in url.lower() or "x.com" in url.lower():
             return "Bu X gönderisinde indirilebilir video bulunamadı."
 

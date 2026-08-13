@@ -988,6 +988,20 @@ class DownloadWorker(QObject):
                 )
                 self.log.emit("yt-dlp işlemi başladı.")
                 try:
+                    if self.request.media_items and all(item.media_type == MediaType.IMAGE for item in self.request.media_items):
+                        self.log.emit("Fotoğraf seçimleri için yt-dlp meta-keşfi atlanıyor.")
+                        fallback_title = next((item.title for item in self.request.media_items if item.title), "Instagram_Post")
+                        fake_info = {"title": fallback_title, "_type": "playlist" if len(self.request.media_items) > 1 else "video", "entries": []}
+                        if self.request.media_type and self.request.media_type == "Tüm Medyalar":
+                            self._download_carousel(fake_info, platform, pref_options)
+                            return
+                        if self.request.media_type and ("Fotoğraf" in self.request.media_type or "image" in self.request.media_type.lower()):
+                            self._download_image_directly(fake_info, platform)
+                            return
+
+                    if platform in (PlatformType.INSTAGRAM_POST, PlatformType.INSTAGRAM_REEL, PlatformType.INSTAGRAM_STORY):
+                        pref_options["ignore_no_formats_error"] = True
+
                     with create_ytdl(pref_options) as downloader:
                         with patch_subprocess_for_hidden_console():
                             info = downloader.extract_info(
@@ -1194,6 +1208,19 @@ class DownloadWorker(QObject):
                     self.status.emit("İndirme başlatılıyor…")
 
                 try:
+                    if self.request.media_items and all(item.media_type == MediaType.IMAGE for item in self.request.media_items):
+                        self.log.emit("Fotoğraf seçimleri için yt-dlp meta-keşfi atlanıyor.")
+                        fallback_title = next((item.title for item in self.request.media_items if item.title), "Instagram_Post")
+                        fake_info = {"title": fallback_title, "_type": "playlist" if len(self.request.media_items) > 1 else "video", "entries": []}
+                        if self.request.playlist or len(self.request.media_items) > 1 or (self.request.media_type and self.request.media_type == "Tüm Medyalar"):
+                            self._download_carousel(fake_info, platform, options)
+                            return
+                        self._download_image_directly(fake_info, platform)
+                        return
+
+                    if platform in (PlatformType.INSTAGRAM_POST, PlatformType.INSTAGRAM_REEL, PlatformType.INSTAGRAM_STORY):
+                        options["ignore_no_formats_error"] = True
+
                     with create_ytdl(options) as downloader:
                         with patch_subprocess_for_hidden_console():
                             info = downloader.extract_info(
@@ -1729,6 +1756,8 @@ class DownloadWorker(QObject):
             or info.get("id")
             or "Instagram_Post"
         )
+        if platform in (PlatformType.INSTAGRAM_POST, PlatformType.INSTAGRAM_REEL, PlatformType.INSTAGRAM_STORY):
+            base_title = base_title.removeprefix("Video by ")
         base_title_sanitized = sanitize_filename(base_title)
         out_dir = self.request.output_dir
 
@@ -1806,7 +1835,7 @@ class DownloadWorker(QObject):
         self, info: dict[str, Any], platform: PlatformType
     ) -> None:
 
-        items = extract_media_items(info)
+        items = self.request.media_items if self.request.media_items else extract_media_items(info)
         image_items = [i for i in items if i.media_type == MediaType.IMAGE]
 
         if not image_items:
@@ -1924,6 +1953,8 @@ class DownloadWorker(QObject):
             target_path_info = self.request.target_final_path
             if not target_path_info:
                 title = item.title or info.get("title") or "Fotoğraf"
+                if platform in (PlatformType.INSTAGRAM_POST, PlatformType.INSTAGRAM_REEL, PlatformType.INSTAGRAM_STORY):
+                    title = title.removeprefix("Video by ")
                 media_id = item.id or info.get("id") or str(uuid.uuid4())[:8]
                 base_name = f"{title} [{media_id}]"
                 target_path = reserve_unique_media_path(
@@ -1954,8 +1985,8 @@ class DownloadWorker(QObject):
                         self.progress_details.emit(
                             {
                                 "speed": _human_speed(0),
-                                "downloaded_bytes": f"{_human_speed(downloaded)} / {_human_speed(total_size)}",
-                                "total_bytes": "",
+                                "downloaded_bytes": downloaded,
+                                "total_bytes": total_size,
                             }
                         )
 

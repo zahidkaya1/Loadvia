@@ -508,7 +508,7 @@ def reserve_unique_media_path(
     if not target_extension.startswith("."):
         target_extension = "." + target_extension
 
-    supported_extensions = (".mp4", ".mp3", ".webm", ".m4a", ".mkv", ".opus", ".wav")
+    supported_extensions = (".mp4", ".mp3", ".webm", ".m4a", ".mkv", ".opus", ".wav", ".jpg", ".jpeg", ".png", ".webp")
 
     with _reservation_lock:
         match = re.match(r"^(.*?)\s*\((\d+)\)$", base_name)

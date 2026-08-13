@@ -799,7 +799,7 @@ def test_translate_social_error():
     err4 = translate_social_error(
         "This post only contains photos", "https://www.instagram.com/p/123"
     )
-    assert "Fotoğraf indirme desteği henüz eklenmedi" in err4
+    assert "indirilebilir medya bulunamadı" in err4
 
     err5 = translate_social_error(
         "Login required to view this reel", "https://www.instagram.com/reel/123"
