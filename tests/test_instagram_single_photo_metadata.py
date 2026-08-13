@@ -42,7 +42,7 @@ def test_instagram_single_photo_metadata_success():
         mock_ytdl = MagicMock()
         mock_ytdl.extract_info.return_value = mock_info
         mock_create_ytdl.return_value.__enter__.return_value = mock_ytdl
-        
+
         worker.run()
 
     # yt-dlp create opts should have ignore_no_formats_error
@@ -52,14 +52,93 @@ def test_instagram_single_photo_metadata_success():
     assert failed_msg is None, f"Failed signal tetiklenmemeli, gelen: {failed_msg}"
     assert metadata is not None, "Metadata uretilmeli"
     assert len(metadata.media_items) == 1, "1 adet medya öğesi olmalı"
-    
+
     item = metadata.media_items[0]
     assert item.media_type == MediaType.IMAGE, "Medya tipi IMAGE olmalı"
     assert item.index == 0, "Index 0 olmalı"
 
 def test_legacy_error_not_used():
     from src.models import translate_social_error
-    
+
     msg = translate_social_error("There is no video in this post", "https://instagram.com/p/pic123")
     assert "Fotoğraf indirme desteği henüz eklenmedi" not in msg
     assert "indirilebilir medya bulunamadı" in msg.lower()
+
+def test_instagram_image_only_carousel():
+    from src.models import MediaType, extract_media_items
+    mock_info = {
+        "extractor": "instagram",
+        "_type": "playlist",
+        "entries": [
+            {
+                "id": "pic1",
+                "extractor": "instagram",
+                "thumbnails": [{"url": "http://img1.jpg", "width": 100}],
+            },
+            {
+                "id": "pic2",
+                "extractor": "instagram",
+                "thumbnails": [{"url": "http://img2.jpg", "width": 100}],
+            },
+            {
+                "id": "pic3",
+                "extractor": "instagram",
+                "thumbnails": [{"url": "http://img3.jpg", "width": 100}],
+            }
+        ]
+    }
+    items = extract_media_items(mock_info)
+    assert len(items) == 3
+    for i in range(3):
+        assert items[i].media_type == MediaType.IMAGE
+        assert items[i].index == i
+        assert items[i].url == f"http://img{i+1}.jpg"
+
+def test_instagram_mixed_carousel():
+    from src.models import MediaType, extract_media_items
+    mock_info = {
+        "extractor": "instagram",
+        "_type": "playlist",
+        "entries": [
+            {
+                "id": "img1",
+                "extractor": "instagram",
+                "thumbnails": [{"url": "http://img1.jpg", "width": 100}],
+            },
+            {
+                "id": "vid1",
+                "extractor": "instagram",
+                "ext": "mp4",
+                "vcodec": "h264",
+                "url": "http://vid1.mp4",
+            },
+            {
+                "id": "img2",
+                "extractor": "instagram",
+                "thumbnails": [{"url": "http://img2.jpg", "width": 100}],
+            }
+        ]
+    }
+    items = extract_media_items(mock_info)
+    assert len(items) == 3
+    assert items[0].media_type == MediaType.IMAGE
+    assert items[0].url == "http://img1.jpg"
+    assert items[1].media_type == MediaType.VIDEO
+    assert items[1].url == "http://vid1.mp4"
+    assert items[2].media_type == MediaType.IMAGE
+    assert items[2].url == "http://img2.jpg"
+
+def test_instagram_single_photo_thumbnail_fallback():
+    from src.models import MediaType, extract_media_items
+    mock_info = {
+        "extractor": "instagram",
+        "id": "single1",
+        "thumbnails": [
+            {"url": "http://thumb-low.jpg", "width": 100},
+            {"url": "http://thumb-high.jpg", "width": 1000},
+        ],
+    }
+    items = extract_media_items(mock_info)
+    assert len(items) == 1
+    assert items[0].media_type == MediaType.IMAGE
+    assert items[0].url == "http://thumb-high.jpg"
