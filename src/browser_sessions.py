@@ -650,11 +650,10 @@ def _get_process_pids_by_executable_path(
                 h_process, 0, buffer, ctypes.byref(size)
             ):
                 full_path = buffer.value.lower()
-                if exe_lower in full_path:
-                    if not hints_lower or any(
-                        hint in full_path for hint in hints_lower
-                    ):
-                        matched_pids.append(pid)
+                if exe_lower in full_path and (
+                    not hints_lower or any(hint in full_path for hint in hints_lower)
+                ):
+                    matched_pids.append(pid)
             kernel32.CloseHandle(h_process)
 
     return matched_pids
@@ -683,9 +682,8 @@ def close_browser_gracefully(browser: str) -> bool:
     def enum_windows_proc(hwnd, lParam):
         pid = wintypes.DWORD()
         user32.GetWindowThreadProcessId(hwnd, ctypes.byref(pid))
-        if pid.value in pids:
-            if user32.IsWindowVisible(hwnd):
-                user32.PostMessageW(hwnd, WM_CLOSE, 0, 0)
+        if pid.value in pids and user32.IsWindowVisible(hwnd):
+            user32.PostMessageW(hwnd, WM_CLOSE, 0, 0)
         return True
 
     WNDENUMPROC = ctypes.WINFUNCTYPE(wintypes.BOOL, wintypes.HWND, wintypes.LPARAM)

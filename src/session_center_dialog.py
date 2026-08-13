@@ -344,7 +344,7 @@ class BrowserSelectionDialog(QDialog):
         self.browser_combo.blockSignals(True)
         from src.browser_sessions import BROWSER_DEFINITIONS, is_browser_running
 
-        for b_str in self.browser_map.keys():
+        for b_str in self.browser_map:
             defn = BROWSER_DEFINITIONS.get(b_str)
             disp = defn["display_name"] if defn else b_str.title()
 
@@ -591,9 +591,8 @@ class SessionCenterDialog(QDialog):
 
     def _show_cookie_help(self):
         help_dialog = CookieHelpDialog(self)
-        if help_dialog.exec():
-            if help_dialog.action_taken == "file":
-                self._open_cookie_file_picker()
+        if help_dialog.exec() and help_dialog.action_taken == "file":
+            self._open_cookie_file_picker()
 
     def _open_cookie_file_picker(self):
         file_path, _ = QFileDialog.getOpenFileName(
@@ -602,7 +601,7 @@ class SessionCenterDialog(QDialog):
         if not file_path:
             return
 
-        success, msg = self.manager.import_from_cookie_file(file_path)
+        success, _msg = self.manager.import_from_cookie_file(file_path)
         if success:
             self._refresh_status()
         else:
@@ -616,7 +615,7 @@ class SessionCenterDialog(QDialog):
 
         btn_help = msg_box.addButton("Nasıl Hazırlanır?", QMessageBox.ActionRole)
         btn_retry = msg_box.addButton("Başka Dosya Seç", QMessageBox.ActionRole)
-        btn_cancel = msg_box.addButton("İptal", QMessageBox.RejectRole)
+        msg_box.addButton("İptal", QMessageBox.RejectRole)
 
         msg_box.exec()
 
