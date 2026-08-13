@@ -142,3 +142,26 @@ def test_instagram_single_photo_thumbnail_fallback():
     assert len(items) == 1
     assert items[0].media_type == MediaType.IMAGE
     assert items[0].url == "http://thumb-high.jpg"
+
+
+def test_ytdlp_instagram_logger_filters_expected_warnings(capsys):
+    from src.metadata_worker import YtdlpInstagramLogger
+    logger = YtdlpInstagramLogger()
+
+    # A & B) Instagram image-only metadata: "No video formats found" ve "Requested format is not available" filtrelenir.
+    logger.warning("No video formats found!")
+    logger.warning("Requested format is not available")
+
+    captured = capsys.readouterr()
+    assert "No video formats found" not in captured.err
+    assert "Requested format is not available" not in captured.err
+
+    # C) Başka gerçek warning: filtrelenmez.
+    logger.warning("This is a real extractor warning")
+    captured = capsys.readouterr()
+    assert "This is a real extractor warning" in captured.err
+
+    # Error mesajları her zaman basılmalı
+    logger.error("Some error occurred")
+    captured = capsys.readouterr()
+    assert "Some error occurred" in captured.err

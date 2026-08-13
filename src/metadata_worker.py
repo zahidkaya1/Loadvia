@@ -38,6 +38,26 @@ from src.utils import (
 )
 
 
+class YtdlpInstagramLogger:
+    """
+    Instagram fotoğraf incelemesinde çıkan beklenen
+    'No video formats found' tarzı uyarıları filtreler,
+    diğer gerçek hata ve uyarıları sys.stderr'e basmaya devam eder.
+    """
+    def debug(self, msg: str) -> None:
+        pass
+
+    def warning(self, msg: str) -> None:
+        if "No video formats found" in msg or "Requested format is not available" in msg:
+            return
+        import sys
+        print(msg, file=sys.stderr)
+
+    def error(self, msg: str) -> None:
+        import sys
+        print(msg, file=sys.stderr)
+
+
 def _fetch_kick_playback_m3u8(
     uuid: str, headers: dict[str, str]
 ) -> tuple[str | None, int | str | None, str | None]:
@@ -769,6 +789,7 @@ class MetadataWorker(QObject):
             p_type = detect_platform_type(self.url)
             if p_type in (PlatformType.INSTAGRAM_POST, PlatformType.INSTAGRAM_REEL):
                 opts["ignore_no_formats_error"] = True
+                opts["logger"] = YtdlpInstagramLogger()
 
             temp_cookie_ctx = None
 
