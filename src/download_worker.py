@@ -1212,12 +1212,11 @@ class DownloadWorker(QObject):
                         self.log.emit("Fotoğraf seçimleri için yt-dlp meta-keşfi atlanıyor.")
                         fallback_title = next((item.title for item in self.request.media_items if item.title), "Instagram_Post")
                         fake_info = {"title": fallback_title, "_type": "playlist" if len(self.request.media_items) > 1 else "video", "entries": []}
-                        if self.request.media_type and self.request.media_type == "Tüm Medyalar":
+                        if self.request.playlist or len(self.request.media_items) > 1 or (self.request.media_type and self.request.media_type == "Tüm Medyalar"):
                             self._download_carousel(fake_info, platform, options)
                             return
-                        if self.request.media_type and ("Fotoğraf" in self.request.media_type or "image" in self.request.media_type.lower()):
-                            self._download_image_directly(fake_info, platform)
-                            return
+                        self._download_image_directly(fake_info, platform)
+                        return
 
                     if platform in (PlatformType.INSTAGRAM_POST, PlatformType.INSTAGRAM_REEL, PlatformType.INSTAGRAM_STORY):
                         options["ignore_no_formats_error"] = True
