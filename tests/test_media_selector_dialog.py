@@ -131,19 +131,28 @@ def test_media_selector_dialog_original_index_preservation(qapp):
     assert selected_items[1].index == 4
 
 def test_media_selector_dialog_scroll_geometry(qapp):
-    items = [MediaItem(media_type=MediaType.IMAGE, index=i, url="url") for i in range(20)]
-    dialog = MediaSelectorDialog(items)
+    items_2 = [MediaItem(media_type=MediaType.IMAGE, index=i, url="url") for i in range(2)]
+    dialog_2 = MediaSelectorDialog(items_2)
+
+    items_5 = [MediaItem(media_type=MediaType.IMAGE, index=i, url="url") for i in range(5)]
+    dialog_5 = MediaSelectorDialog(items_5)
+
+    items_20 = [MediaItem(media_type=MediaType.IMAGE, index=i, url="url") for i in range(20)]
+    dialog_20 = MediaSelectorDialog(items_20)
+
+    # Verify dynamic height
+    assert dialog_2.height() < dialog_5.height()
+    assert dialog_20.height() <= 720
 
     # Verify scroll area properties
-    scroll_area = dialog.findChild(QScrollArea)
+    scroll_area = dialog_20.findChild(QScrollArea)
     assert scroll_area is not None
     assert scroll_area.widgetResizable() is True
 
     # Verify geometry constraints
-    assert dialog.minimumSize().width() <= 1366
-    assert dialog.minimumSize().height() <= 768
-    assert dialog.maximumSize().width() <= 1366
-    assert dialog.maximumSize().height() <= 768
+    assert dialog_20.minimumSize().width() <= 1366
+    assert dialog_20.maximumSize().width() <= 1366
+    assert dialog_20.maximumSize().height() <= 768
 
 def test_media_selector_dialog_checkbox_real_click(qapp):
     items = [

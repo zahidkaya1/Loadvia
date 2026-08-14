@@ -33,15 +33,15 @@ class MediaItemWidget(QFrame):
         self.setCursor(Qt.CursorShape.PointingHandCursor)
 
         layout = QHBoxLayout(self)
-        layout.setContentsMargins(10, 10, 10, 10)
-        layout.setSpacing(15)
+        layout.setContentsMargins(6, 6, 6, 6)
+        layout.setSpacing(12)
 
         self.checkbox = QCheckBox()
         self.checkbox.setChecked(True)
         # Ensure checkbox does not steal the cursor if it has one
         self.checkbox.setCursor(Qt.CursorShape.PointingHandCursor)
         self.checkbox.toggled.connect(self._on_checkbox_toggled)
-        self.checkbox.setStyleSheet("QCheckBox::indicator { width: 20px; height: 20px; }")
+
         layout.addWidget(self.checkbox)
 
         self.thumbnail_label = QLabel()
@@ -147,11 +147,15 @@ class MediaSelectorDialog(QDialog):
         self.network_manager.finished.connect(self._on_thumbnail_downloaded)
         self.reply_to_widget: dict[QNetworkReply, MediaItemWidget] = {}
 
-        self.setWindowTitle("Carousel Medyalarını Seç")
+        self.setWindowTitle("Gönderi Medyalarını Seç")
         # Set max dimension constraints to prevent it from growing out of bounds on 1366x768 screens
-        self.setMinimumSize(450, 400)
-        self.resize(500, 600)
+        self.setMinimumSize(450, 250)
         self.setMaximumSize(800, 720)
+
+        base_height = 140
+        card_height = 100
+        target_height = base_height + (len(self.media_items) * card_height)
+        self.resize(500, min(720, target_height))
         self.setWindowFlags(self.windowFlags() & ~Qt.WindowType.WindowContextHelpButtonHint)
 
         self._setup_ui()
@@ -160,7 +164,7 @@ class MediaSelectorDialog(QDialog):
 
     def _setup_ui(self) -> None:
         layout = QVBoxLayout(self)
-        layout.setSpacing(15)
+        layout.setSpacing(12)
         layout.setContentsMargins(20, 20, 20, 20)
 
         header_layout = QHBoxLayout()
