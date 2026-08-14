@@ -33,7 +33,7 @@ def test_video_format_fallback(tmp_path):
         playlist=False,
     )
     opts = build_ydl_options(req)
-    assert opts.get("format_sort") == ["vcodec:h264", "acodec:aac", "ext:mp4"]
+    assert opts.get("format_sort") == ["res", "vcodec:h264", "acodec:aac", "ext:mp4"]
 
 
 def test_ui_has_no_video_compat_combo(qapp):

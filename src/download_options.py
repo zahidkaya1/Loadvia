@@ -75,10 +75,12 @@ def parse_audio_quality(quality: str) -> str:
     return "192"
 
 
-def _video_format(quality: str) -> str:
+def _video_format(quality: str, is_youtube: bool = False) -> str:
     height = parse_quality_height(quality)
     if height is None:
         return "bv*+ba/b"
+    if is_youtube:
+        return f"bv*[height<={height}]+ba/b[height<={height}]"
     return f"bv*[height<={height}]+ba/b[height<={height}]/bv*+ba/b"
 
 
@@ -143,6 +145,10 @@ def build_ydl_options(request: DownloadRequest) -> dict[str, Any]:
         PlatformType.TIKTOK_PROFILE,
         PlatformType.TIKTOK_LIVE,
         PlatformType.TIKTOK_SLIDESHOW,
+    )
+    is_youtube = platform in (
+        PlatformType.YOUTUBE_VIDEO,
+        PlatformType.YOUTUBE_PLAYLIST,
     )
 
     if request.target_final_path and not request.playlist:
@@ -214,11 +220,13 @@ def build_ydl_options(request: DownloadRequest) -> dict[str, Any]:
     else:
         options.update(
             {
-                "format": _video_format(request.quality),
+                "format": _video_format(request.quality, is_youtube=is_youtube),
                 "merge_output_format": "mp4",
             }
         )
-        if platform != PlatformType.THREADS:
+        if is_youtube:
+            options["format_sort"] = ["res", "vcodec:h264", "acodec:aac", "ext:mp4"]
+        elif platform != PlatformType.THREADS:
             options["format_sort"] = ["vcodec:h264", "acodec:aac", "ext:mp4"]
 
     # --- Çerez / oturum seçenekleri ---

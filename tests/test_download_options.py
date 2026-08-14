@@ -6,7 +6,7 @@ from src.models import DownloadRequest
 
 def create_request(**overrides):
     values = {
-        "url": "https://example.com/video",
+        "url": "https://www.youtube.com/watch?v=example",
         "output_dir": Path("downloads"),
         "media_type": "Video (MP4)",
         "quality": "720p",
@@ -46,21 +46,21 @@ def test_playlist_480p_format_selector(tmp_path):
     req = create_request(output_dir=tmp_path, quality="480p'ye kadar", playlist=True)
     options = build_ydl_options(req)
     assert "height<=480" in options["format"]
-    assert options["format"].endswith("/bv*+ba/b")
+    assert options["format"] == "bv*[height<=480]+ba/b[height<=480]"
 
 
 def test_playlist_720p_format_selector(tmp_path):
     req = create_request(output_dir=tmp_path, quality="720p'ye kadar", playlist=True)
     options = build_ydl_options(req)
     assert "height<=720" in options["format"]
-    assert options["format"].endswith("/bv*+ba/b")
+    assert options["format"] == "bv*[height<=720]+ba/b[height<=720]"
 
 
 def test_playlist_1080p_format_selector(tmp_path):
     req = create_request(output_dir=tmp_path, quality="1080p'ye kadar", playlist=True)
     options = build_ydl_options(req)
     assert "height<=1080" in options["format"]
-    assert options["format"].endswith("/bv*+ba/b")
+    assert options["format"] == "bv*[height<=1080]+ba/b[height<=1080]"
 
 
 def test_playlist_best_quality_no_height_limit(tmp_path):
