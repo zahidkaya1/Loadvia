@@ -501,18 +501,19 @@ def test_video_format_prioritizes_h264():
     assert opts.get("format_sort") == ["vcodec:h264", "acodec:aac", "ext:mp4"]
 
 
-def test_handle_post_download_transcode_h264_no_reencode(tmp_path, monkeypatch):
+def test_handle_post_download_transcode_h264_always_reencodes(tmp_path, monkeypatch):
     from src.download_worker import DownloadWorker
 
     test_file = tmp_path / "test_h264.mp4"
     test_file.write_bytes(b"fake_video")
 
     req = DownloadRequest(
-        url="https://www.tiktok.com/@user/video/123",
+        url="https://www.tiktok.com/@test/video/123",
         output_dir=tmp_path,
         media_type="Video (MP4)",
         quality="1080p'ye kadar",
         playlist=False,
+        convert_hevc_to_h264=False,
     )
     worker = DownloadWorker(req)
     worker._last_filename = str(test_file)
@@ -534,4 +535,4 @@ def test_handle_post_download_transcode_h264_no_reencode(tmp_path, monkeypatch):
     worker._handle_post_download_transcode({})
 
     assert test_file.exists()
-    assert not any("dönüştürülüyor" in log for log in logs)
+    assert any("dönüştürülüyor" in log for log in logs)

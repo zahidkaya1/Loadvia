@@ -21,6 +21,7 @@ def mock_request(tmp_path):
     )
 
 
+
 def test_video_format_fallback(tmp_path):
     # It should prioritize h264 and aac via format_sort without failing
     from src.download_options import build_ydl_options
@@ -45,10 +46,11 @@ def test_ui_has_no_video_compat_combo(qapp):
 
 @patch("src.download_worker.probe_media_codecs")
 @patch("subprocess.Popen")
-def test_mp4_trigger_compatibility_check(mock_popen, mock_probe, mock_request):
+def test_video_always_forces_transcode_even_h264(mock_popen, mock_probe, mock_request):
+
     mock_probe.return_value = {
-        "video_codec": "vp9",
-        "audio_codec": "opus",
+        "video_codec": "h264",
+        "audio_codec": "aac",
         "pix_fmt": "yuv420p",
         "width": 1920,
         "height": 1080,
@@ -98,9 +100,10 @@ def test_mp4_trigger_compatibility_check(mock_popen, mock_probe, mock_request):
 
 @patch("src.download_worker.probe_media_codecs")
 @patch("subprocess.Popen")
-def test_no_transcode_for_already_compatible(mock_popen, mock_probe, mock_request):
+def test_hevc_video_forces_transcode(mock_popen, mock_probe, mock_request):
+
     mock_probe.return_value = {
-        "video_codec": "h264",
+        "video_codec": "hevc",
         "audio_codec": "aac",
         "pix_fmt": "yuv420p",
         "width": 1920,
@@ -113,42 +116,21 @@ def test_no_transcode_for_already_compatible(mock_popen, mock_probe, mock_reques
     target.touch()
     worker._last_filename = str(target)
 
+    process_mock = MagicMock()
+    process_mock.poll.return_value = 0
+    process_mock.returncode = 0
+    process_mock.stderr.readline.return_value = ""
+    mock_popen.return_value = process_mock
+
     worker._handle_post_download_transcode({"_filename": str(target)})
-    mock_popen.assert_not_called()
+
+    mock_popen.assert_called_once()
 
 
 @patch("src.download_worker.probe_media_codecs")
 @patch("subprocess.Popen")
-def test_no_transcode_for_no_audio_compatible(mock_popen, mock_probe, mock_request):
-    mock_probe.return_value = {
-        "video_codec": "h264",
-        "audio_codec": "none",
-        "pix_fmt": "yuv420p",
-        "width": 1920,
-        "height": 1080,
-        "channels": 0,
-    }
-
-    worker = DownloadWorker(mock_request)
-    target = mock_request.output_dir / "test.mp4"
-    target.touch()
-    worker._last_filename = str(target)
-
-    worker._handle_post_download_transcode({"_filename": str(target)})
-    mock_popen.assert_not_called()
-
-
-@patch("src.download_worker.probe_media_codecs")
-@patch("subprocess.Popen")
-def test_transcode_odd_resolutions(mock_popen, mock_probe, mock_request):
-    mock_probe.return_value = {
-        "video_codec": "h264",
-        "audio_codec": "aac",
-        "pix_fmt": "yuv420p",
-        "width": 1921,  # odd width
-        "height": 1080,
-        "channels": 2,
-    }
+def test_video_no_audio_uses_optional_map(mock_popen, mock_probe, mock_request):
+    mock_probe.return_value = {}
 
     process_mock = MagicMock()
     process_mock.poll.return_value = 0
@@ -161,14 +143,47 @@ def test_transcode_odd_resolutions(mock_popen, mock_probe, mock_request):
     target.touch()
     worker._last_filename = str(target)
 
-    with patch.object(Path, "rename") as mock_rename:
+    with patch.object(Path, "rename"):
         temp_file = target.with_name(target.stem + ".wa_temp.mp4")
         temp_file.touch()
         with patch.object(Path, "stat") as mock_stat:
             mock_stat.return_value.st_size = 100
             worker._handle_post_download_transcode({"_filename": str(target)})
+
         mock_popen.assert_called_once()
-        mock_rename.assert_called_once()
+        args, _ = mock_popen.call_args
+        cmd = args[0]
+        assert "0:a:0?" in cmd
+
+
+@patch("src.download_worker.probe_media_codecs")
+@patch("subprocess.Popen")
+def test_video_odd_dimensions_uses_scale_filter(mock_popen, mock_probe, mock_request):
+    mock_probe.return_value = {}
+
+    process_mock = MagicMock()
+    process_mock.poll.return_value = 0
+    process_mock.returncode = 0
+    process_mock.stderr.readline.return_value = ""
+    mock_popen.return_value = process_mock
+
+    worker = DownloadWorker(mock_request)
+    target = mock_request.output_dir / "test.mp4"
+    target.touch()
+    worker._last_filename = str(target)
+
+    with patch.object(Path, "rename"):
+        temp_file = target.with_name(target.stem + ".wa_temp.mp4")
+        temp_file.touch()
+        with patch.object(Path, "stat") as mock_stat:
+            mock_stat.return_value.st_size = 100
+            worker._handle_post_download_transcode({"_filename": str(target)})
+
+        mock_popen.assert_called_once()
+        args, _ = mock_popen.call_args
+        cmd = args[0]
+        assert "scale=trunc(iw/2)*2:trunc(ih/2)*2" in cmd
+
 
 
 @patch("src.download_worker.probe_media_codecs")
@@ -196,6 +211,7 @@ def test_mp3_not_transcoded(mock_popen, mock_probe, tmp_path):
 @patch("src.download_worker.probe_media_codecs")
 @patch("subprocess.Popen")
 def test_transcode_failure_preserves_original(mock_popen, mock_probe, mock_request):
+
     mock_probe.return_value = {
         "video_codec": "hevc",
         "audio_codec": "aac",
@@ -231,6 +247,7 @@ def test_transcode_failure_preserves_original(mock_popen, mock_probe, mock_reque
 @patch("src.download_worker.probe_media_codecs")
 @patch("subprocess.Popen")
 def test_transcode_cancellation(mock_popen, mock_probe, mock_request):
+
     mock_probe.return_value = {
         "video_codec": "vp9",
         "audio_codec": "opus",

@@ -37,7 +37,6 @@ from src.utils import (
     clean_log_message,
     create_ytdl,
     hidden_subprocess_kwargs,
-    is_hevc_codec,
     patch_subprocess_for_hidden_console,
     probe_media_codecs,
     validate_final_download,
@@ -97,6 +96,7 @@ class DownloadWorker(QObject):
     cancelled = Signal()
     finished = Signal()
     progress_details = Signal(dict)
+    progress_mode_changed = Signal(bool)
 
     def __init__(self, request: DownloadRequest) -> None:
         super().__init__()
@@ -1067,30 +1067,40 @@ class DownloadWorker(QObject):
                                 downloader.params["continuedl"] = False
 
                         result = None
-                        with patch_subprocess_for_hidden_console():
-                            try:
-                                result = downloader.process_ie_result(
-                                    info, download=True
+                        if platform == PlatformType.YOUTUBE_VIDEO:
+                            fresh_options = dict(downloader.params)
+                            with (
+                                create_ytdl(fresh_options) as fresh_downloader,
+                                patch_subprocess_for_hidden_console(),
+                            ):
+                                result = fresh_downloader.extract_info(
+                                    self.request.url, download=True
                                 )
-                            except Exception as dl_err:
-                                if (
-                                    "Requested format is not available" in str(dl_err)
-                                    and self.request.media_type != "Ses (MP3)"
-                                ):
-                                    self.log.emit(
-                                        "İstenen kalite formatı bulunamadı, güvenli genel seçici ile yeniden deneniyor…"
+                        else:
+                            with patch_subprocess_for_hidden_console():
+                                try:
+                                    result = downloader.process_ie_result(
+                                        info, download=True
                                     )
-                                    fallback_options = pref_options.copy()
-                                    fallback_options["format"] = "bv*+ba/b"
-                                    fallback_options.pop("format_sort", None)
-                                    with create_ytdl(
-                                        fallback_options
-                                    ) as fallback_downloader:
-                                        result = fallback_downloader.process_ie_result(
-                                            info, download=True
+                                except Exception as dl_err:
+                                    if (
+                                        "Requested format is not available" in str(dl_err)
+                                        and self.request.media_type != "Ses (MP3)"
+                                    ):
+                                        self.log.emit(
+                                            "İstenen kalite formatı bulunamadı, güvenli genel seçici ile yeniden deneniyor…"
                                         )
-                                else:
-                                    raise
+                                        fallback_options = pref_options.copy()
+                                        fallback_options["format"] = "bv*+ba/b"
+                                        fallback_options.pop("format_sort", None)
+                                        with create_ytdl(
+                                            fallback_options
+                                        ) as fallback_downloader:
+                                            result = fallback_downloader.process_ie_result(
+                                                info, download=True
+                                            )
+                                    else:
+                                        raise
 
                     if self._cancel_requested:
                         self.cancelled.emit()
@@ -1292,30 +1302,40 @@ class DownloadWorker(QObject):
                                 downloader.params["continuedl"] = False
 
                         result = None
-                        with patch_subprocess_for_hidden_console():
-                            try:
-                                result = downloader.process_ie_result(
-                                    info, download=True
+                        if platform == PlatformType.YOUTUBE_VIDEO:
+                            fresh_options = dict(downloader.params)
+                            with (
+                                create_ytdl(fresh_options) as fresh_downloader,
+                                patch_subprocess_for_hidden_console(),
+                            ):
+                                result = fresh_downloader.extract_info(
+                                    self.request.url, download=True
                                 )
-                            except Exception as dl_err:
-                                if (
-                                    "Requested format is not available" in str(dl_err)
-                                    and self.request.media_type != "Ses (MP3)"
-                                ):
-                                    self.log.emit(
-                                        "İstenen kalite formatı bulunamadı, güvenli genel seçici ile yeniden deneniyor…"
+                        else:
+                            with patch_subprocess_for_hidden_console():
+                                try:
+                                    result = downloader.process_ie_result(
+                                        info, download=True
                                     )
-                                    fallback_options = options.copy()
-                                    fallback_options["format"] = "bv*+ba/b"
-                                    fallback_options.pop("format_sort", None)
-                                    with create_ytdl(
-                                        fallback_options
-                                    ) as fallback_downloader:
-                                        result = fallback_downloader.process_ie_result(
-                                            info, download=True
+                                except Exception as dl_err:
+                                    if (
+                                        "Requested format is not available" in str(dl_err)
+                                        and self.request.media_type != "Ses (MP3)"
+                                    ):
+                                        self.log.emit(
+                                            "İstenen kalite formatı bulunamadı, güvenli genel seçici ile yeniden deneniyor…"
                                         )
-                                else:
-                                    raise
+                                        fallback_options = options.copy()
+                                        fallback_options["format"] = "bv*+ba/b"
+                                        fallback_options.pop("format_sort", None)
+                                        with create_ytdl(
+                                            fallback_options
+                                        ) as fallback_downloader:
+                                            result = fallback_downloader.process_ie_result(
+                                                info, download=True
+                                            )
+                                    else:
+                                        raise
 
                     if self._cancel_requested:
                         self.cancelled.emit()
@@ -2061,28 +2081,17 @@ class DownloadWorker(QObject):
         if not target_file or not target_file.exists():
             return
 
-        self.status.emit("Video codec'i kontrol ediliyor…")
-        probe = probe_media_codecs(target_file)
-        v_codec = probe.get("video_codec", "")
-        a_codec = probe.get("audio_codec", "")
-        pix_fmt = probe.get("pix_fmt", "")
-        width = probe.get("width", 0)
-        height = probe.get("height", 0)
-        channels = probe.get("channels", 0)
+        # v1.3.1:
+        # Video (MP4) indirmelerinde mevcut güvenli compatibility full transcode
+        # zorunlu olarak uygulanır. Smart skip/remux davranışı v1.3.2'ye ertelenmiştir.
+        # convert_hevc_to_h264 legacy ayarı genel bir uyumluluk anahtarı DEĞİLDİR.
+        needs_compat_convert = (
+            self.request.media_type == "Video (MP4)"
+            and target_file.suffix.lower() == ".mp4"
+        )
 
-        is_video_ok = (
-            v_codec == "h264"
-            and pix_fmt in ("yuv420p", "yuvj420p")
-            and width % 2 == 0
-            and height % 2 == 0
-        )
-        is_audio_ok = (
-            a_codec == "none"
-            or a_codec == "unknown"
-            or (a_codec == "aac" and channels in (1, 2))
-        )
-        is_ext_ok = target_file.suffix.lower() == ".mp4"
-        needs_compat_convert = not (is_video_ok and is_audio_ok and is_ext_ok)
+        if not needs_compat_convert:
+            return
 
         if needs_compat_convert:
             self.log.emit(
@@ -2091,6 +2100,9 @@ class DownloadWorker(QObject):
             self.status.emit(
                 "Video cihaz ve mesajlaşma uygulamalarıyla uyumlu hale getiriliyor…"
             )
+            self.progress_mode_changed.emit(True)
+
+            probe = probe_media_codecs(target_file)
 
             temp_whatsapp = target_file.with_name(target_file.stem + ".wa_temp.mp4")
             try:
@@ -2154,6 +2166,7 @@ class DownloadWorker(QObject):
                             process.kill()
                         if temp_whatsapp.exists():
                             temp_whatsapp.unlink()
+                        self.progress_mode_changed.emit(False)
                         return
 
                     line = process.stderr.readline() if process.stderr else ""
@@ -2175,6 +2188,7 @@ class DownloadWorker(QObject):
                             )
 
                 process.wait()
+                self.progress_mode_changed.emit(False)
 
                 if (
                     process.returncode == 0
@@ -2208,115 +2222,4 @@ class DownloadWorker(QObject):
                 self.log.emit(f"Dönüştürme hatası: {exc}")
                 self.status.emit(
                     "Video indirildi ancak uyumlu MP4 biçimine dönüştürülemedi. Orijinal dosya korundu."
-                )
-
-        elif is_hevc_codec(v_codec) and self.request.convert_hevc_to_h264:
-            self.log.emit(
-                "İndirilen video HEVC/H.265 biçiminde. Windows uyumlu H.264 MP4'e dönüştürülüyor…"
-            )
-            self.status.emit("Video Windows uyumlu H.264 biçimine dönüştürülüyor…")
-
-            temp_hevc = target_file.with_name(
-                target_file.stem + ".hevc_temp" + target_file.suffix
-            )
-            try:
-                if temp_hevc.exists():
-                    temp_hevc.unlink()
-                target_file.rename(temp_hevc)
-            except OSError as exc:
-                self.log.emit(f"Geçici dosya oluşturulamadı: {exc}")
-                return
-
-            cmd = [
-                "ffmpeg",
-                "-y",
-                "-i",
-                str(temp_hevc),
-                "-c:v",
-                "libx264",
-                "-preset",
-                "medium",
-                "-crf",
-                "20",
-                "-pix_fmt",
-                "yuv420p",
-                "-c:a",
-                "aac",
-                "-b:a",
-                "192k",
-                "-movflags",
-                "+faststart",
-                str(target_file),
-            ]
-
-            duration = float(probe.get("duration") or 0.0)
-            process = None
-            try:
-                kwargs = hidden_subprocess_kwargs(
-                    stderr=subprocess.PIPE,
-                    stdout=subprocess.PIPE,
-                    text=True,
-                    encoding="utf-8",
-                    errors="replace",
-                )
-                process = subprocess.Popen(cmd, **kwargs)
-                self._active_process = process
-                time_pattern = re.compile(r"time=(\d+):(\d+):(\d+\.\d+)")
-
-                while True:
-                    if self._cancel_requested:
-                        if process:
-                            process.kill()
-                        if temp_hevc.exists():
-                            temp_hevc.unlink()
-                        if target_file.exists():
-                            target_file.unlink()
-                        return
-
-                    line = process.stderr.readline() if process.stderr else ""
-                    if not line and process.poll() is not None:
-                        break
-
-                    if line:
-                        m = time_pattern.search(line)
-                        if m and duration > 0:
-                            h, m_m, s = (
-                                float(m.group(1)),
-                                float(m.group(2)),
-                                float(m.group(3)),
-                            )
-                            curr_sec = h * 3600 + m_m * 60 + s
-                            pct = min(99, max(0, int((curr_sec / duration) * 100)))
-                            self.status.emit(
-                                f"Video Windows uyumlu H.264 biçimine dönüştürülüyor… (%{pct})"
-                            )
-
-                process.wait()
-
-                if (
-                    process.returncode == 0
-                    and target_file.exists()
-                    and target_file.stat().st_size > 0
-                ):
-                    if temp_hevc.exists():
-                        temp_hevc.unlink()
-                    self.status.emit("Video ve ses hazırlanıyor…")
-                    self.log.emit("H.264 MP4 dönüştürmesi tamamlandı.")
-                else:
-                    if temp_hevc.exists() and not target_file.exists():
-                        temp_hevc.rename(target_file)
-                    self.log.emit(
-                        "Video indirildi ancak Windows uyumlu H.264 biçimine dönüştürülemedi."
-                    )
-                    self.status.emit(
-                        "H.264 dönüştürmesi tamamlanamadı (orijinal dosya korundu)."
-                    )
-            except Exception as exc:  # noqa: BLE001
-                if process:
-                    process.kill()
-                if temp_hevc.exists() and not target_file.exists():
-                    temp_hevc.rename(target_file)
-                self.log.emit(f"Dönüştürme hatası: {exc}")
-                self.status.emit(
-                    "H.264 dönüştürmesi başarısız (orijinal dosya korundu)."
                 )

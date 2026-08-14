@@ -377,7 +377,7 @@ def probe_media_codecs(file_path: str | Path) -> dict[str, Any]:
             errors="replace",
             check=False,
         )
-        res = subprocess.run(cmd, check=False, **kwargs)
+        res = subprocess.run(cmd, **kwargs)  # noqa: PLW1510
         if res.returncode != 0 or not res.stdout:
             return {
                 "video_codec": "unknown",

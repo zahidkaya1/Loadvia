@@ -1535,6 +1535,7 @@ class MainWindow(QMainWindow):
         worker.status.connect(self.status_label.setText)
         worker.log.connect(self._append_log)
         worker.progress_details.connect(self._on_progress_details)
+        worker.progress_mode_changed.connect(self._on_download_progress_mode_changed)
         worker.succeeded.connect(self._on_download_succeeded)
         worker.failed.connect(self._on_download_failed)
         worker.cancelled.connect(self._on_download_cancelled)
@@ -2022,6 +2023,8 @@ class MainWindow(QMainWindow):
             QApplication.quit()
 
     def _set_ui_downloading(self, active: bool) -> None:
+        if not active:
+            self.progress_bar.setRange(0, 100)
         self.download_button.setEnabled(not active)
         self.cancel_button.setEnabled(active)
         self.url_input.setEnabled(not active)
@@ -2531,6 +2534,7 @@ class MainWindow(QMainWindow):
             thread.started.connect(worker.run)
             worker.progress.connect(self._on_queue_progress)
             worker.progress_details.connect(self._on_queue_progress_details)
+            worker.progress_mode_changed.connect(self._on_queue_progress_mode_changed)
             worker.succeeded.connect(self._on_queue_download_succeeded)
             worker.failed.connect(self._on_queue_download_failed)
             worker.cancelled.connect(self._on_queue_download_cancelled)
@@ -2577,6 +2581,14 @@ class MainWindow(QMainWindow):
         if self._queue_dialog:
             self._queue_dialog.update_item_progress(item.id, percent=percent)
 
+    @Slot(bool)
+    def _on_queue_progress_mode_changed(self, indeterminate: bool) -> None:
+        item = self._get_active_queue_item()
+        if not item:
+            return
+        if self._queue_dialog:
+            self._queue_dialog.update_item_progress(item.id, indeterminate=indeterminate)
+
     @Slot(str)
     def _on_queue_progress_details(self, details: str) -> None:
         item = self._get_active_queue_item()
@@ -2599,6 +2611,13 @@ class MainWindow(QMainWindow):
                     self._queue_dialog.refresh_table(self._queue_items)
         except Exception as exc:  # noqa: BLE001
             self._append_log(f"Kuyruk indirme başarı işleme hatası: {exc}")
+
+    @Slot(bool)
+    def _on_download_progress_mode_changed(self, indeterminate: bool) -> None:
+        if indeterminate:
+            self.progress_bar.setRange(0, 0)
+        else:
+            self.progress_bar.setRange(0, 100)
 
     @Slot(str)
     def _on_queue_download_failed(self, error_msg: str) -> None:

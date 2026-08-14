@@ -736,7 +736,10 @@ def test_redownload_behavior_unique_paths_and_history(tmp_path, monkeypatch):
             pass
 
         def extract_info(self, url, download=False):
-            return {"id": "mock1", "title": "Mock Video", "ext": "mp4"}
+            base = {"id": "mock1", "title": "Mock Video", "ext": "mp4"}
+            if download:
+                return self.process_ie_result(base, download=True)
+            return base
 
         def prepare_filename(self, info):
             return str(tmp_path / "Mock Video [mock1].mp4")

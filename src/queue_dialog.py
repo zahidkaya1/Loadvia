@@ -743,7 +743,7 @@ class DownloadQueueDialog(QDialog):
         self._update_summary(queue_items)
 
     def update_item_progress(
-        self, item_id: str, percent: int | None = None, text: str | None = None
+        self, item_id: str, percent: int | None = None, text: str | None = None, indeterminate: bool | None = None
     ) -> None:
         """Kuyruk listesini tamamen baştan oluşturmadan tek bir öğenin ilerleme hücresini günceller."""
         for row in range(self.table.rowCount()):
@@ -751,10 +751,15 @@ class DownloadQueueDialog(QDialog):
             if item_widget and item_widget.data(Qt.ItemDataRole.UserRole) == item_id:
                 cell_widget = self.table.cellWidget(row, 7)
                 if isinstance(cell_widget, QProgressBar):
+                    if indeterminate is not None:
+                        if indeterminate:
+                            cell_widget.setRange(0, 0)
+                        else:
+                            cell_widget.setRange(0, 100)
                     if percent is not None:
                         cell_widget.setValue(percent)
                     if text is not None:
-                        cell_widget.setFormat(f"%p% - {text}")
+                        cell_widget.setFormat(f"%p% - {text}" if cell_widget.maximum() > 0 else text)
                 break
 
     def _update_summary(self, items: list[QueueItem]) -> None:
