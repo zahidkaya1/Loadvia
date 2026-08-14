@@ -255,7 +255,7 @@ def test_http_user_agent_ascii_only():
     from src.config import APP_NAME, HTTP_USER_AGENT
 
     assert APP_NAME == "Loadvia"
-    assert HTTP_USER_AGENT == "Loadvia/1.3.0"
+    assert HTTP_USER_AGENT == "Loadvia/1.3.1"
     assert "İ" not in HTTP_USER_AGENT
     assert HTTP_USER_AGENT.isascii() is True
 

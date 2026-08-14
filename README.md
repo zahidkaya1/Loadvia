@@ -2,7 +2,7 @@
 
 YouTube, Instagram, X/Twitter, TikTok, Facebook ve Threads gibi platformlardan medya indirmeyi kolaylaştıran Windows masaüstü uygulaması.
 
-Güncel kararlı sürüm: **v1.3.0**
+Güncel kararlı sürüm: **v1.3.1**
 
 ## Desteklenen Platformlar
 
@@ -59,13 +59,7 @@ Ayrıca:
 
 ## Kurulum
 
-### Setup
-`Loadvia-Setup-1.3.0.exe`
-Normal Windows kurulumu isteyen kullanıcılar için.
-
-### Portable
-`Loadvia-1.3.0-windows-x64-portable.zip`
-Kurulum yapmadan kullanmak isteyenler için. Portable ZIP çıkarıldıktan sonra `Loadvia.exe` çalıştırılır.
+### Setup çalıştırılabilir dosyası `Loadvia-Setup-1.3.1.exe` ile kolayca kurulur ve başlat menüsüne kısayol ekler.anıcılar  Taşınabilir ZIP arşivi `Loadvia-1.3.1-windows-x64-portable.zip` kurulum gerektirmeden çalıştırılabilir. Ayarlar uygulamanın kendi dizininde saklanır. USB belleklere atılarak taşınabilir.a `Loadvia.exe` çalıştırılır.
 
 ## Kullanım
 
@@ -77,14 +71,12 @@ Kurulum yapmadan kullanmak isteyenler için. Portable ZIP çıkarıldıktan sonr
 
 Oturum gereken içeriklerde Oturum Merkezi kullanılabilir.
 
-## Son Sürüm — v1.3.0
+## Son Sürüm — v1.3.1
 
-- Instagram tek fotoğraf indirme desteği eklendi
-- Instagram fotoğraf/video carousel indirme desteği eklendi
-- Carousel içinden istenilen medyaları tek tek seçebilme özelliği eklendi (Fotoğraf + Video karışık carousel desteği)
-- Orijinal medya sırasını koruyan dosya adlandırması eklendi
-- Video ve ses indirmeleri için kalite/format seçenekleri daha sade ve ortak bir yapıya geçirildi
-- Ses/MP3 kalite seçimiyle ilgili indirme sorunları giderildi
+- YouTube kalite seçimi ve HTTP 403 indirme akışı iyileştirmeleri yapıldı
+- Video uyumluluk işlemi ve ilerleme çubuğu arayüzü iyileştirildi
+- Video probe işlemleri daha kararlı hale getirildi
+- Instagram çoklu medya/carousel seçim ekranı daha kompakt ve kullanışlı hale getirildi
 
 Detaylı geçmiş için CHANGELOG.md dosyasına göz atabilirsiniz.
 

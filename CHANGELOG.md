@@ -1,6 +1,18 @@
 # Changelog
 Tüm önemli değişiklikler bu dosyada belgelenmektedir.
 
+## [1.3.1] - 2026-08-14
+### İyileştirildi
+- YouTube kalite seçimi, seçilen maksimum çözünürlüğü aşmayacak şekilde iyileştirildi.
+- Instagram çoklu medya/carousel seçim ekranı daha kullanışlı ve kompakt hale getirildi.
+- Uzun video uyumluluk işlemlerinde ilerleme çubuğu hareketli işlem durumunu gösterecek şekilde iyileştirildi.
+
+### Düzeltildi
+- Bazı YouTube indirmelerinde oluşan HTTP 403 hatasına neden olan indirme akışı düzeltildi.
+- Video codec bilgilerinin bazı durumlarda UNKNOWN görünmesine yol açan codec probe hatası düzeltildi.
+- Video uyumluluk dönüşümü daha kararlı hale getirildi.
+- YouTube kalite seçiminin istenen sınırın üzerinde formata düşebilmesine yol açabilecek fallback davranışı engellendi.
+
 ## [1.3.0] - 2026-08-12
 ### Yeni
 - Instagram tek fotoğraf indirme desteği.
