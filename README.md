@@ -1,37 +1,41 @@
 # Loadvia
 
-YouTube, Instagram, X/Twitter, TikTok, Facebook ve Threads gibi platformlardan medya indirmeyi kolaylaştıran Windows masaüstü uygulaması.
+Loadvia, YouTube, Instagram, X/Twitter, TikTok, Facebook ve Threads gibi platformlardan medya indirmeyi kolaylaştırmak amacıyla geliştirilmiş bir Windows masaüstü uygulamasıdır.
 
-Güncel kararlı sürüm: **v1.3.1**
+**Güncel kararlı sürüm:** `v1.3.1`
 
-## Desteklenen Platformlar
+## ✨ Öne Çıkan Özellikler
 
-- YouTube — Destekleniyor
-- Instagram — Destekleniyor
-- X / Twitter — Destekleniyor
-- TikTok — Destekleniyor
-- Facebook — Destekleniyor
-- Threads — Destekleniyor
-- Kick — Planlanıyor
-
-## Temel Özellikler
-
-- Instagram tek fotoğraf indirme
-- Instagram çoklu fotoğraf/video (carousel) indirme
-- Carousel içeriklerinde istenen medyaları seçebilme
+- Video, fotoğraf ve çoklu medya indirme
+- Instagram carousel içeriklerinde medya seçimi
 - İndirme kuyruğu
-- İndirme klasörü seçimi
 - Başarısız işlemleri yeniden deneme
 - Panodan bağlantı algılama
-- Sadeleştirilmiş kalite ve format seçenekleri
-- WhatsApp uyumlu MP4 seçeneği
-- Windows masaüstü arayüzü
+- İndirme klasörü seçimi
+- Kalite ve format seçimi
+- WhatsApp uyumlu MP4 çıktısı
+- Tarayıcı oturumu yönetimi
+- Setup ve Portable dağıtım seçenekleri
+- Windows 10 ve Windows 11 desteği
 
-## Oturum Merkezi
+## 🌐 Desteklenen Platformlar
 
-Instagram ve Threads gibi oturum gerektirebilen platformlar için tarayıcı oturumları Loadvia içinden yönetilebilir.
+| Platform | Durum |
+| --- | --- |
+| YouTube | ✅ Destekleniyor |
+| Instagram | ✅ Destekleniyor |
+| X / Twitter | ✅ Destekleniyor |
+| TikTok | ✅ Destekleniyor |
+| Facebook | ✅ Destekleniyor |
+| Threads | ✅ Destekleniyor |
+| Kick | 🕒 Planlanıyor |
 
-Desteklenen tarayıcı altyapısı:
+## 🔐 Oturum Merkezi
+
+Instagram ve Threads gibi oturum gerektirebilen platformlar için tarayıcı oturumları Loadvia içerisinden yönetilebilir.
+
+Desteklenen tarayıcılar:
+
 - Google Chrome
 - Mozilla Firefox
 - Microsoft Edge
@@ -40,57 +44,94 @@ Desteklenen tarayıcı altyapısı:
 - Opera GX
 - Vivaldi
 
-Ayrıca:
-- Çerez Dosyasıyla Al
-- Aktif oturum kaynağı
-- Profil bilgisi
-- İçe aktarma zamanı
-- Oturumu Test Et
-- Oturum Verilerini Kaldır
+Oturum Merkezi üzerinden:
 
-## Güvenlik / Gizlilik
+- Tarayıcıdan oturum alma
+- Çerez dosyasından oturum alma
+- Aktif oturum kaynağını görüntüleme
+- Profil bilgisini görüntüleme
+- İçe aktarma zamanını görüntüleme
+- Oturumu test etme
+- Kayıtlı oturum verilerini kaldırma
 
-- Loadvia önce oturumsuz indirmeyi dener.
-- Gerektiğinde kullanıcı tarafından içe aktarılan oturum kullanılabilir.
-- Kalıcı olarak yalnız gerekli Threads/Instagram oturum verileri saklanır.
+işlemleri gerçekleştirilebilir.
+
+## 🔒 Güvenlik ve Gizlilik
+
+- Loadvia önce oturumsuz indirme yöntemini dener.
+- Gerektiğinde kullanıcı tarafından içe aktarılan oturum bilgileri kullanılabilir.
+- Yalnızca gerekli Instagram ve Threads oturum verileri kalıcı olarak saklanır.
 - Oturum bilgileri kullanıcıya özel olarak Windows üzerinde korunur.
-- Çerez değerleri arayüzde gösterilmez.
-- Kullanıcı Oturum Merkezi'nden kayıtlı oturum verilerini kaldırabilir.
+- Çerez değerleri uygulama arayüzünde gösterilmez.
+- Kayıtlı oturum verileri kullanıcı tarafından Oturum Merkezi üzerinden silinebilir.
 
-## Kurulum
+## 📦 Kurulum
 
-### Setup çalıştırılabilir dosyası `Loadvia-Setup-1.3.1.exe` ile kolayca kurulur ve başlat menüsüne kısayol ekler.anıcılar  Taşınabilir ZIP arşivi `Loadvia-1.3.1-windows-x64-portable.zip` kurulum gerektirmeden çalıştırılabilir. Ayarlar uygulamanın kendi dizininde saklanır. USB belleklere atılarak taşınabilir.a `Loadvia.exe` çalıştırılır.
+### Setup
 
-## Kullanım
+`Loadvia-Setup-1.3.1.exe` dosyasını çalıştırarak Loadvia'yı Windows'a kurabilirsiniz.
 
-1. Bağlantıyı kopyala/yapıştır.
-2. Loadvia bağlantıyı analiz etsin.
-3. Format/kalite seçeneklerini seç.
-4. İndirme konumunu belirle.
-5. İndirmeyi başlat.
+Kurulum işlemi:
 
-Oturum gereken içeriklerde Oturum Merkezi kullanılabilir.
+- Uygulama dosyalarını sisteme yükler
+- Başlat menüsüne kısayol ekler
+- Loadvia'nın standart masaüstü uygulaması olarak kullanılmasını sağlar
 
-## Son Sürüm — v1.3.1
+### Portable
 
-- YouTube kalite seçimi ve HTTP 403 indirme akışı iyileştirmeleri yapıldı
-- Video uyumluluk işlemi ve ilerleme çubuğu arayüzü iyileştirildi
-- Video probe işlemleri daha kararlı hale getirildi
-- Instagram çoklu medya/carousel seçim ekranı daha kompakt ve kullanışlı hale getirildi
+`Loadvia-1.3.1-windows-x64-portable.zip` arşivi kurulum gerektirmeden kullanılabilir.
 
-Detaylı geçmiş için CHANGELOG.md dosyasına göz atabilirsiniz.
+Arşivi çıkardıktan sonra:
 
-## Kapsam Sınırı
+`Loadvia.exe`
 
-Uygulama internetteki her içeriği garanti ederek indiremez. Destek; sitenin yapısına, erişim izinlerine ve altyapı bileşenlerine bağlıdır. Özel hesap içerikleri, silinmiş paylaşımlar, coğrafi kısıtlamalar ve DRM ile korunan yayınlar indirilemeyebilir.
+dosyasını çalıştırmanız yeterlidir.
 
-Uygulamayı yalnızca sahibi olduğunuz, açıkça indirme izniniz bulunan veya hukuken indirme hakkınız olan içerikler için kullanın.
+Portable sürümde uygulama ayarları kendi dizininde saklanır ve uygulama USB bellek gibi taşınabilir ortamlardan çalıştırılabilir.
 
-## Gereksinimler
+## ▶️ Kullanım
 
-- Windows 10 veya Windows 11
+1. Desteklenen bir platformdan bağlantıyı kopyalayın.
+2. Bağlantıyı Loadvia'ya yapıştırın.
+3. Loadvia'nın içeriği analiz etmesini bekleyin.
+4. Format ve kalite seçeneklerini belirleyin.
+5. İndirme konumunu seçin.
+6. İndirmeyi başlatın.
 
-## Kurulum (Geliştirici)
+Oturum gerektiren içeriklerde Oturum Merkezi kullanılabilir.
+
+## 🆕 Son Sürüm — v1.3.1
+
+- YouTube kalite seçimi geliştirildi.
+- HTTP 403 hatalarına karşı indirme akışı iyileştirildi.
+- Video uyumluluk işlemleri geliştirildi.
+- İlerleme çubuğu arayüzü iyileştirildi.
+- Video probe işlemleri daha kararlı hale getirildi.
+- Instagram carousel seçim ekranı daha kompakt ve kullanışlı hale getirildi.
+
+Tüm sürüm geçmişi için [`CHANGELOG.md`](CHANGELOG.md) dosyasını inceleyebilirsiniz.
+
+## ⚠️ Kapsam Sınırları
+
+Loadvia internetteki her içeriğin indirilebileceğini garanti etmez.
+
+İndirme desteği aşağıdaki faktörlere bağlıdır:
+
+- Platformun mevcut yapısı
+- Erişim izinleri
+- Oturum gereksinimleri
+- Altyapı bileşenlerinin desteği
+
+Özel hesap içerikleri, silinmiş paylaşımlar, coğrafi olarak kısıtlanmış içerikler ve DRM korumalı yayınlar indirilemeyebilir.
+
+Loadvia'yı yalnızca sahibi olduğunuz, açıkça indirme izniniz bulunan veya hukuken indirme hakkına sahip olduğunuz içerikler için kullanın.
+
+## 💻 Sistem Gereksinimleri
+
+- Windows 10
+- Windows 11
+
+## 🛠️ Geliştirici Kurulumu
 
 ```powershell
 py -3.12 -m venv .venv
@@ -98,4 +139,3 @@ py -3.12 -m venv .venv
 python -m pip install --upgrade pip
 pip install -r requirements.txt
 python app.py
-```
