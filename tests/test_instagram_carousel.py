@@ -77,7 +77,6 @@ def test_download_carousel_all_images(
     logs = []
     worker.log.connect(logs.append)
     worker.run()
-    print("\n".join(logs))
 
     files = list(temp_output_dir.glob("*.jpg"))
     assert len(files) == 3
@@ -125,7 +124,6 @@ def test_download_carousel_mixed(temp_output_dir, mock_downloader, mock_cffi_req
     logs = []
     worker.log.connect(logs.append)
     worker.run()
-    print("\n".join(logs))
 
     image_files = list(temp_output_dir.glob("*.jpg"))
     assert len(image_files) == 2
