@@ -30,6 +30,44 @@ Loadvia, YouTube, Instagram, X/Twitter, TikTok, Facebook ve Threads gibi platfor
 | Threads | ✅ Destekleniyor |
 | Kick | 🕒 Planlanıyor |
 
+## 🧰 Kullanılan Teknolojiler
+
+Loadvia'nın geliştirilmesinde aşağıdaki temel teknolojiler ve araçlar kullanılmaktadır:
+
+| Teknoloji | Kullanım |
+| --- | --- |
+| Python 3.12 | Uygulamanın temel geliştirme dili |
+| PySide6 | Windows masaüstü kullanıcı arayüzü |
+| yt-dlp | Desteklenen platformlardan medya bilgisi alma ve indirme altyapısı |
+| FFmpeg | Video ve ses işleme, dönüştürme ve uyumluluk işlemleri |
+| pytest | Otomatik test altyapısı |
+| PyInstaller | Windows uygulama paketleme |
+| Inno Setup | Windows Setup paketi oluşturma |
+| GitHub Actions | Otomatik test ve CI süreçleri |
+| Git | Sürüm kontrolü |
+
+## 📸 Ekran Görüntüleri
+
+### Ana Ekran
+
+![Loadvia Ana Ekran](docs/screenshots/main-window.png)
+
+### Medya Analizi ve İndirme Seçenekleri
+
+![Loadvia Medya Analizi](docs/screenshots/media-preview.png)
+
+### Oturum Merkezi
+
+![Loadvia Oturum Merkezi](docs/screenshots/session-center.png)
+
+### İndirme Kuyruğu
+
+![Loadvia İndirme Kuyruğu](docs/screenshots/download-queue.png)
+
+### Carousel Medya Seçimi
+
+![Loadvia Carousel Medya Seçimi](docs/screenshots/carousel-selector.png)
+
 ## 🔐 Oturum Merkezi
 
 Instagram ve Threads gibi oturum gerektirebilen platformlar için tarayıcı oturumları Loadvia içerisinden yönetilebilir.
@@ -100,6 +138,58 @@ Portable sürümde uygulama ayarları kendi dizininde saklanır ve uygulama USB 
 
 Oturum gerektiren içeriklerde Oturum Merkezi kullanılabilir.
 
+## 🧪 Test ve Kalite Kontrolü
+
+Loadvia'da temel uygulama davranışlarını ve platform entegrasyonlarını doğrulamak için otomatik testler kullanılmaktadır.
+
+Test kapsamı arasında:
+
+- Platform ve URL algılama
+- İndirme seçenekleri
+- İndirme kuyruğu
+- Yeniden deneme işlemleri
+- Instagram carousel işlemleri
+- Oturum yönetimi
+- İndirme geçmişi
+- Dosya adlandırma
+- FFmpeg ve video uyumluluğu
+- Kullanıcı arayüzü davranışları
+- Paketleme ve kurulum yapısı
+
+gibi alanlar bulunmaktadır.
+
+Testleri çalıştırmak için:
+
+```powershell
+python -m pytest
+```
+
+CI kapsamında kullanılan temel test grubu:
+
+```powershell
+python -m pytest -m "not live and not qt_integration and not kick_experimental"
+```
+
+GitHub Actions üzerinden yapılan kontroller sayesinde ana dala gönderilen değişiklikler otomatik olarak test edilir.
+
+## 🏗️ Build ve Dağıtım
+
+Loadvia, Windows üzerinde hem kurulumlu hem de taşınabilir olarak dağıtılabilecek şekilde hazırlanmıştır.
+
+Dağıtım sürecinde:
+
+- PyInstaller ile Windows uygulama paketi oluşturulur.
+- Inno Setup ile Setup paketi hazırlanır.
+- Portable ZIP dağıtımı oluşturulur.
+- Sürüm bilgileri ve paketleme dosyaları proje içerisinde yönetilir.
+- GitHub Releases üzerinden sürümler yayımlanır.
+- GitHub Actions ile otomatik test kontrolleri gerçekleştirilir.
+
+Kullanıcılara iki farklı dağıtım biçimi sunulur:
+
+- **Setup:** Windows'a standart uygulama kurulumu
+- **Portable:** Kurulum gerektirmeyen taşınabilir sürüm
+
 ## 🆕 Son Sürüm — v1.3.1
 
 - YouTube kalite seçimi geliştirildi.
@@ -139,3 +229,4 @@ py -3.12 -m venv .venv
 python -m pip install --upgrade pip
 pip install -r requirements.txt
 python app.py
+```
